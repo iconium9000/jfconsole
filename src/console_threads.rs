@@ -9,7 +9,7 @@ use std::{
 
 use crate::ProcessorConfig;
 use rustyline::{error::ReadlineError, Editor};
-use serialport::{Error, TTYPort};
+use serialport::{Error, SerialPort};
 
 enum Msg {
     SwitchToProcessor {
@@ -52,7 +52,7 @@ struct ProcessorCache {
 }
 
 fn serial_port_task(
-    mut serial_port: TTYPort,
+    mut serial_port: Box<dyn SerialPort>,
     processor_idx: usize,
     msg_sender: Sender<Msg>,
     write_receiver: Receiver<WriteBuf>,
@@ -60,17 +60,6 @@ fn serial_port_task(
     println!("start serial_port_task");
     let mut readbuf = [0u8; 0x100];
     loop {
-        let rcved = match write_receiver.try_recv() {
-            Ok(WriteBuf::Exit) => {
-                println!("end serial_port_task for {}", processor_idx);
-                break Ok(());
-            }
-            Ok(WriteBuf::Buf(msg)) => {
-                let _ = serial_port.write(&msg);
-                true
-            }
-            _ => false,
-        };
 
         if match serial_port.read(&mut readbuf) {
             Err(_) => true,
@@ -81,10 +70,22 @@ fn serial_port_task(
                     instant: Utc::now(),
                     bytes: Box::from(&readbuf[..count]),
                 });
-                !rcved
+                false
             }
         } {
-            thread::sleep(Duration::from_millis(1));
+            let _rcved = match write_receiver.try_recv() {
+                Ok(WriteBuf::Exit) => {
+                    println!("end serial_port_task for {}", processor_idx);
+                    break Ok(());
+                }
+                Ok(WriteBuf::Buf(msg)) => {
+                    let _ = serial_port.write(&msg);
+                    true
+                }
+                _ => false,
+            };
+    
+            // thread::sleep(Duration::from_millis(1));
         }
     }
 }
@@ -206,7 +207,7 @@ impl ProcessorConfig {
             let path = p.port_name.clone();
             let baud_rate = p.baudrate.get();
             let builder = serialport::new(path, baud_rate).timeout(duration);
-            let serial_port = TTYPort::open(&builder)?;
+            let serial_port = builder.open()?;
             let processor_name = p.processor_name.borrow().clone();
             let msg_sender = msg_sender.clone();
 

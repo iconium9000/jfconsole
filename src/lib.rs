@@ -1,17 +1,19 @@
 extern crate serde;
 extern crate serde_json;
 
-use crate::user_io::{read_and_parse_user_entry, read_user_entry, ReadAndParseUserEntryRes};
+use crate::user_io::{read_and_parse_user_entry, ReadAndParseUserEntryRes};
+use rustyline::{error::ReadlineError, Editor};
 use serde::{Deserialize, Serialize};
 use serialport::{available_ports, SerialPortType, UsbPortInfo};
 use std::{
     cell::{Cell, RefCell},
     fs::{self, DirEntry, File},
-    io::{BufReader, Error as IOError},
+    io::BufReader,
     num::ParseIntError,
     path::PathBuf,
     rc::Rc,
 };
+use user_io::RaisedError;
 
 pub mod console_threads;
 pub mod user_io;
@@ -51,7 +53,7 @@ impl ProcessorConfig {
         project_path: PathBuf,
         cfg: ConfigJson,
         procs: &Vec<Rc<Processor>>,
-    ) -> Result<Self, IOError> {
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let mut processors = vec![];
         let cfg_processors_len = cfg.processors.len();
         for p_json in cfg.processors {
@@ -70,7 +72,7 @@ impl ProcessorConfig {
         }
 
         if processors.len() != cfg_processors_len {
-            raise_ioerr!("port not found");
+            return Err(RaisedError::new("port not found"));
         }
 
         let project_name = cfg.project_name;
@@ -84,20 +86,20 @@ impl ProcessorConfig {
 
 impl ProcessorConfig {
     fn read_config(
-        dir_entry_res: Result<DirEntry, IOError>,
+        dir_entry_res: Result<DirEntry, std::io::Error>,
         procs: &Vec<Rc<Processor>>,
-    ) -> Result<ProcessorConfig, IOError> {
+    ) -> Result<ProcessorConfig, Box<dyn std::error::Error>> {
         let dir_entry = dir_entry_res?;
         if dir_entry.file_type()?.is_dir() {
-            raise_ioerr!("path to dir");
+            return Err(RaisedError::new("path to dir"));
         }
         let project_path = dir_entry.path();
         if let Some(ext) = project_path.extension() {
             if !ext.eq("json") {
-                raise_ioerr!("bad ext");
+                return Err(RaisedError::new("bad ext"));
             }
         } else {
-            raise_ioerr!("no ext");
+            return Err(RaisedError::new("no ext"));
         }
 
         let file = File::open(&project_path)?;
@@ -107,15 +109,15 @@ impl ProcessorConfig {
                 return ProcessorConfig::from_procs(project_path, cfg, procs);
             }
             Err(_) => {
-                raise_ioerr!("json parse error");
+                return Err(RaisedError::new("json parse error"));
             }
         }
     }
 
-    pub fn user_select() -> Result<Self, IOError> {
+    pub fn user_select() -> Result<Self, Box<dyn std::error::Error>> {
         let procs = Processor::list_processors()?;
         if procs.len() == 0 {
-            raise_ioerr!("> No com ports found");
+            return Err(RaisedError::new("> No com ports found"));
         }
 
         loop {
@@ -149,14 +151,15 @@ impl ProcessorConfig {
                     }
                     println!("> Invalid entry\n");
                 }
-                ReadAndParseUserEntryRes::ParseErr(_) => {
-                    println!("> Invalid entry\n");
+                ReadAndParseUserEntryRes::ParseErr(_, entry) => {
+                    println!("> Invalid Entry {:?}\n", entry);
                 }
                 ReadAndParseUserEntryRes::EmptyEntry => {
                     println!("> New Custom config\n");
                     break;
                 }
-                ReadAndParseUserEntryRes::IOErr(e) => return Err(e),
+                ReadAndParseUserEntryRes::IOErr(e) => return Err(Box::new(e)),
+                ReadAndParseUserEntryRes::ReadErr(e) => return Err(Box::new(e)),
             }
         }
 
@@ -166,35 +169,38 @@ impl ProcessorConfig {
             p.user_selected.set(false);
         }
 
+        let mut editor = Editor::<()>::new();
         let mut selected = vec![];
         loop {
             match Processor::user_select(&procs) {
                 UserSelectRes::Proc(p) => {
                     p.user_config()?;
                     selected.push(p);
+                    continue;
                 }
                 UserSelectRes::AlreadySelected => {
                     println!("> Port already selected\n");
-                    read_user_entry("press enter to continue")?;
-                }
-                UserSelectRes::NoneRemaining => {
-                    println!("> No Ports remaining\n");
-                    read_user_entry("press enter to continue")?;
                 }
                 UserSelectRes::EntryOutOfRange => {
                     println!("> Entry Out of Range\n");
-                    read_user_entry("press enter to continue")?;
                 }
-                UserSelectRes::ParseErr(e) => {
-                    println!("{:#?}", e);
-                    read_user_entry("press enter to continue")?;
+                UserSelectRes::ParseErr(_, entry) => {
+                    println!("> Invalid Entry {:?}\n", entry);
                 }
                 UserSelectRes::EmptyEntry => break,
-                UserSelectRes::IOErr(e) => return Err(e),
+                UserSelectRes::NoneRemaining => {
+                    println!("> No Ports remaining\n");
+                    break;
+                }
+                UserSelectRes::IOErr(e) => return Err(Box::new(e)),
+                UserSelectRes::ReadErr(e) => return Err(Box::new(e)),
             }
+            let _ = editor.readline("press enter to continue: ");
         }
 
-        let project_name = read_user_entry("enter project name")?;
+        let prompt = "enter project name: ";
+        let op = |e| Err(Box::new(e));
+        let project_name = editor.readline(prompt).or_else(op)?;
         println!("> Set project name as {}", project_name);
 
         let project_path = PathBuf::from(format!("./{}.json", project_name));
@@ -212,22 +218,19 @@ impl ProcessorConfig {
         match serde_json::to_string_pretty(value) {
             Ok(contents) => {
                 fs::write(project_path.clone(), contents)?;
-                return Ok(Self {
+                Ok(Self {
                     processors: selected,
                     project_name,
                     project_path,
-                });
+                })
             }
-            Err(e) => {
-                println!("{:#?}", e);
-                raise_ioerr!("Serialize ProcessorConfigJson failed");
-            }
+            Err(e) => Err(Box::new(e)),
         }
     }
 }
 
 impl Processor {
-    pub fn list_processors() -> Result<Vec<Rc<Processor>>, IOError> {
+    pub fn list_processors() -> Result<Vec<Rc<Processor>>, std::io::Error> {
         let mut procs = vec![];
 
         for serial_port_info in available_ports()? {
@@ -259,8 +262,9 @@ pub enum UserSelectRes {
     AlreadySelected,
     EntryOutOfRange,
     EmptyEntry,
-    ParseErr(ParseIntError),
-    IOErr(IOError),
+    ParseErr(ParseIntError, String),
+    IOErr(std::io::Error),
+    ReadErr(ReadlineError),
 }
 
 impl Processor {
@@ -295,24 +299,27 @@ impl Processor {
                 }
             }
             ReadAndParseUserEntryRes::IOErr(e) => UserSelectRes::IOErr(e),
-            ReadAndParseUserEntryRes::ParseErr(e) => UserSelectRes::ParseErr(e),
+            ReadAndParseUserEntryRes::ParseErr(e, entry) => UserSelectRes::ParseErr(e, entry),
+            ReadAndParseUserEntryRes::ReadErr(e) => UserSelectRes::ReadErr(e),
             ReadAndParseUserEntryRes::EmptyEntry => UserSelectRes::EmptyEntry,
         }
     }
 
-    pub fn user_config(&self) -> Result<(), IOError> {
+    pub fn user_config(&self) -> Result<(), Box<dyn std::error::Error>> {
         println!("> Selected {}\n", self.port_name);
         self.user_selected.set(true);
 
-        let s = read_user_entry("Enter nickname for processor")?;
-        println!("> Nicknamed {} as {}\n", self.port_name, s);
-        *self.processor_name.borrow_mut() = s;
+        let mut editor = Editor::<()>::new();
+        let prompt = "Enter nickname for processor: ";
+        let op = |e| Err(Box::new(e));
+        let processor_name = editor.readline(prompt).or_else(op)?;
+        println!("> Nicknamed {} as {}\n", self.port_name, processor_name);
 
         let mut baudrate = 0;
         while baudrate == 0 {
             println!(
-                "Baud rates options for {} port '{}':",
-                self.processor_name.borrow(),
+                "Baud rates options for {:?} port '{:?}':",
+                processor_name,
                 self.port_name,
             );
             println!("1) 115200");
@@ -320,15 +327,20 @@ impl Processor {
             println!("_) custom value");
 
             match read_and_parse_user_entry("Enter 1, 2, or a custom value") {
-                ReadAndParseUserEntryRes::IOErr(e) => return Err(e),
+                ReadAndParseUserEntryRes::IOErr(e) => {
+                    return Err(Box::new(e));
+                }
+                ReadAndParseUserEntryRes::ReadErr(e) => {
+                    return Err(Box::new(e));
+                }
+                ReadAndParseUserEntryRes::Ok(0) => {
+                    println!("> Invalid Entry, try again\n");
+                }
                 ReadAndParseUserEntryRes::Ok(1) => {
                     baudrate = 115200;
                 }
                 ReadAndParseUserEntryRes::Ok(2) => {
                     baudrate = 3000000;
-                }
-                ReadAndParseUserEntryRes::Ok(0) => {
-                    println!("> Empty Entry, try again\n");
                 }
                 ReadAndParseUserEntryRes::Ok(e) => {
                     baudrate = e;
@@ -336,17 +348,18 @@ impl Processor {
                 ReadAndParseUserEntryRes::EmptyEntry => {
                     println!("> Empty Entry, try again\n");
                 }
-                ReadAndParseUserEntryRes::ParseErr(_) => {
-                    println!("> Parse Error, try again\n");
+                ReadAndParseUserEntryRes::ParseErr(_, entry) => {
+                    println!("> Invalid Entry {:?}\n", entry);
                 }
             }
         }
         println!(
             "> Set baudrate of {} as {}\n",
-            self.processor_name.borrow(),
+            processor_name,
             baudrate
         );
 
+        *self.processor_name.borrow_mut() = processor_name;
         Ok(self.baudrate.set(baudrate))
     }
 }

@@ -1,22 +1,41 @@
 use std::{
-    io::{stdin, stdout, Error as IOError, Write},
+    error::Error,
     str::FromStr,
 };
 
-#[macro_export]
-macro_rules! raise_ioerr {
-    ($msg:expr) => {
-        return Err(std::io::Error::new(std::io::ErrorKind::Other, $msg))
-    };
+use rustyline::Editor;
+
+#[derive(Debug)]
+pub struct RaisedError {
+    msg: String,
 }
 
-pub fn read_user_entry(msg: &str) -> Result<String, IOError> {
-    let mut user_entry = String::new();
-    print!("{}: ", msg);
-    stdout().flush()?;
-    stdin().read_line(&mut user_entry)?;
-    let l = user_entry.len() - 1;
-    Ok(String::from(&user_entry[..l]))
+impl RaisedError {
+    pub fn new(msg: &str) -> Box<dyn std::error::Error> {
+        Box::new(Self {
+            msg: String::from(msg),
+        })
+    }
+}
+
+impl std::fmt::Display for RaisedError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.msg)
+    }
+}
+
+impl std::error::Error for RaisedError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        None
+    }
+
+    fn description(&self) -> &str {
+        &self.msg
+    }
+
+    fn cause(&self) -> Option<&dyn Error> {
+        self.source()
+    }
 }
 
 pub enum ReadAndParseUserEntryRes<T>
@@ -25,33 +44,27 @@ where
 {
     Ok(T),
     EmptyEntry,
-    IOErr(IOError),
-    ParseErr(<T as FromStr>::Err),
+    IOErr(std::io::Error),
+    ParseErr(<T as FromStr>::Err, String),
+    ReadErr(rustyline::error::ReadlineError),
 }
 
 pub fn read_and_parse_user_entry<T>(msg: &str) -> ReadAndParseUserEntryRes<T>
 where
     T: FromStr,
 {
-    let mut user_entry = String::new();
-    print!("{}: ", msg);
-    if let Err(e) = stdout().flush() {
-        return ReadAndParseUserEntryRes::IOErr(e);
-    }
-    if let Err(e) = stdin().read_line(&mut user_entry) {
-        return ReadAndParseUserEntryRes::IOErr(e);
-    }
-
-    let l = user_entry.len() - 1;
-    if l == 0 {
-        return ReadAndParseUserEntryRes::EmptyEntry;
-    }
-    let ref entry = user_entry[..l];
-    match entry.parse::<T>() {
-        Ok(e) => ReadAndParseUserEntryRes::Ok(e),
-        Err(e) => {
-            println!("> Invalid Entry {}\n", entry);
-            ReadAndParseUserEntryRes::ParseErr(e)
+    let mut editor = Editor::<()>::new();
+    match editor.readline(&format!("{}: ", msg)) {
+        Ok(user_entry) => {
+            if user_entry.len() == 0 {
+                ReadAndParseUserEntryRes::EmptyEntry
+            } else {
+                match user_entry.parse::<T>() {
+                    Ok(e) => ReadAndParseUserEntryRes::Ok(e),
+                    Err(e) => ReadAndParseUserEntryRes::ParseErr(e, user_entry),
+                }
+            }
         }
+        Err(e) => ReadAndParseUserEntryRes::ReadErr(e),
     }
 }
