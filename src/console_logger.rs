@@ -34,8 +34,14 @@ fn console_logger_task(
         .write(true)
         .open(file_path.clone())
     {
-        Ok(opened_file) => file = opened_file,
-        Err(e) => return Err(Box::new(e)),
+        Ok(opened_file) => {
+            file = opened_file;
+            println!("> [console_logger_task] opened {:?}", file_path);
+        },
+        Err(e) => {
+            println!("> [console_logger_task] error {:?}", e);
+            return Err(Box::new(e));
+        },
     };
 
     for line in receiver {
@@ -56,15 +62,18 @@ fn console_logger_task(
                 );
                 let buf = line.as_bytes();
                 if let Err(e) = file.write_all(buf) {
+                    println!("> [console_logger_task] write error {:#?}", e);
                     return Err(Box::new(e))
                 }
                 if let Err(e) = file.sync_all() {
+                    println!("> [console_logger_task] sync error {:#?}", e);
                     return Err(Box::new(e))
                 }
             }
         }
     }
-    Ok(())
+    println!("> [console_logger_task] closing {:?}", file_path);
+    Ok(println!("> [console_logger_task] end"))
 }
 
 impl ConsoleLogger {

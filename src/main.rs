@@ -8,6 +8,6 @@ use jfconsole::ProcessorConfig;
 pub fn main() {
     ProcessorConfig::user_select()
         .unwrap()
-        .start_threads()
+        .main_task()
         .unwrap();
 }

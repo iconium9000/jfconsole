@@ -55,10 +55,11 @@ struct ProcessorCache {
 fn serial_port_task(
     mut serial_port: Box<dyn SerialPort>,
     processor_idx: usize,
+    processor_name: String,
     msg_sender: Sender<Msg>,
     write_receiver: Receiver<WriteBuf>,
 ) -> Result<(), Box<dyn std::error::Error + Send>> {
-    println!("start serial_port_task");
+    println!("> [serial_port_task] start {:?}", processor_name);
     let mut readbuf = [0u8; 0x100];
     loop {
         if match serial_port.read(&mut readbuf) {
@@ -75,7 +76,7 @@ fn serial_port_task(
         } {
             let _rcved = match write_receiver.try_recv() {
                 Ok(WriteBuf::Exit) => {
-                    println!("end serial_port_task for {}", processor_idx);
+                    println!("> [serial_port_task] end {:?}", processor_name);
                     break Ok(());
                 }
                 Ok(WriteBuf::Buf(msg)) => {
@@ -160,12 +161,6 @@ fn byte_process_task(
     line_sender: Sender<LogLine>,
     mut processor_cache: Vec<ProcessorCache>,
 ) -> Result<(), Error> {
-    if processor_cache.is_empty() {
-        let kind = serialport::ErrorKind::Unknown;
-        let description = "processor_cache is_empty";
-        return Err(Error::new(kind, description));
-    }
-
     for msg in &msg_receiver {
         match msg {
             Msg::Exit => break,
@@ -211,11 +206,15 @@ fn byte_process_task(
         let _ = p.join_handle.join();
     }
 
-    Ok(())
+    Ok(println!("> [byte_process_task] end"))
 }
 
 impl ProcessorConfig {
-    pub fn start_threads(self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn main_task(self) -> Result<(), Box<dyn std::error::Error>> {
+        if self.processors.len() == 0 {
+            return Ok(println!("> [main_task] no processors"));
+        }
+
         let (msg_sender, msg_receiver) = channel();
         let mut processor_cache = vec![];
         let mut writers = vec![];
@@ -246,16 +245,22 @@ impl ProcessorConfig {
                 .load_history(&processor_writer.history_path)
                 .is_err()
             {
-                println!("No previous history at '{}'", processor_writer.history_path);
+                println!("> [main_task] no previous history at {:?}", processor_writer.history_path);
             }
             writers.push(processor_writer);
 
             processor_cache.push(ProcessorCache {
-                processor_name,
+                processor_name: processor_name.clone(),
                 next_line_buf: NextLineBuf::Empty,
                 write_sender,
                 join_handle: thread::spawn(move || {
-                    serial_port_task(serial_port, processor_idx, msg_sender, write_receiver)
+                    serial_port_task(
+                        serial_port,
+                        processor_idx,
+                        processor_name,
+                        msg_sender,
+                        write_receiver,
+                    )
                 }),
             });
 
@@ -272,7 +277,7 @@ impl ProcessorConfig {
             .load_history(proc_switcher_history_path)
             .is_err()
         {
-            println!("No previous history at '{}'", proc_switcher_history_path);
+            println!("> [main_task] no previous history at {:?}", proc_switcher_history_path);
         }
         processor_idx = 0;
         loop {
@@ -291,32 +296,33 @@ impl ProcessorConfig {
                     });
                 }
                 Err(ReadlineError::Interrupted) => {
-                    println!("> Exit loop");
                     break;
                 }
                 Err(ReadlineError::Eof) => {
                     processor_idx += 1;
                     processor_idx %= writers.len();
                     let ref w = writers[processor_idx];
-                    println!("Switching to '{}'", w.processor_name);
+                    println!("> [main_task] switching to {:?}", w.processor_name);
                 }
                 Err(err) => {
-                    println!("Error: {:?}", err);
+                    println!("> [main_task] error: {:#?}", err);
                     break;
                 }
             }
         }
 
-        println!("send exit");
+        println!("> [main_task] send exit commands");
+
         let _ = logger.exit();
         let _ = msg_sender.send(Msg::Exit);
         for mut e in writers {
             let _ = e.editor.save_history(&e.history_path);
         }
         let _ = proc_switcher_editor.save_history(proc_switcher_history_path);
+        
         let _ = byte_process_thread.join();
         let _ = logger.join();
 
-        Ok(())
+        Ok(println!("> [main_task] end"))
     }
 }
