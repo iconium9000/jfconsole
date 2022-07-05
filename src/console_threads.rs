@@ -12,15 +12,13 @@ use rustyline::{error::ReadlineError, Editor};
 use serialport::{Error, SerialPort};
 
 enum Msg {
-    SwitchToProcessor {
-        processor_idx: usize,
-    },
     Read {
         processor_idx: usize,
         instant: DateTime<Utc>,
         bytes: Box<[u8]>,
     },
     Write {
+        processor_idx: usize,
         bytes: Box<[u8]>,
         instant: DateTime<Utc>,
     },
@@ -41,7 +39,7 @@ struct ProcessorWriter {
     editor: Editor<()>,
     history_path: String,
     processor_name: String,
-    processor_idx: usize,
+    write_sender: Sender<WriteBuf>,
 }
 
 struct ProcessorCache {
@@ -60,7 +58,6 @@ fn serial_port_task(
     println!("start serial_port_task");
     let mut readbuf = [0u8; 0x100];
     loop {
-
         if match serial_port.read(&mut readbuf) {
             Err(_) => true,
             Ok(0) => true,
@@ -84,10 +81,62 @@ fn serial_port_task(
                 }
                 _ => false,
             };
-    
             // thread::sleep(Duration::from_millis(1));
         }
     }
+}
+
+const DATE_TIME_FMT: &'static str = "%y-%m-%d %H:%M:%S%.3f";
+
+fn read_msg(
+    processor_cache: &mut Vec<ProcessorCache>,
+    processor_idx: usize,
+    instant: DateTime<Utc>,
+    bytes: Box<[u8]>,
+) {
+    let ref mut p = processor_cache[processor_idx];
+    let cow = String::from_utf8_lossy(&bytes)
+        .replace("\r\n", "\n")
+        .replace("\n\r", "\n")
+        .replace("\r", "\n");
+    let mut q: VecDeque<&str> = cow.split("\n").collect();
+    if let Some(first) = q.pop_front() {
+        match &mut p.next_line_buf {
+            NextLineBuf::Buf { instant: _, pre } => {
+                pre.push_str(first);
+            }
+            NextLineBuf::Empty => {
+                p.next_line_buf = NextLineBuf::Buf {
+                    instant,
+                    pre: first.into(),
+                };
+            }
+        };
+    }
+    let next_line_buf = match q.pop_back() {
+        Some(last) => NextLineBuf::Buf {
+            instant,
+            pre: last.into(),
+        },
+        None => NextLineBuf::Empty,
+    };
+    if let NextLineBuf::Buf { instant, pre } = &p.next_line_buf {
+        println!(
+            "{} r {} {}",
+            p.processor_name,
+            instant.format(DATE_TIME_FMT).to_string(),
+            pre
+        );
+    }
+    while let Some(next) = q.pop_front() {
+        println!(
+            "{} r {} {}",
+            p.processor_name,
+            instant.format(DATE_TIME_FMT).to_string(),
+            next
+        );
+    }
+    p.next_line_buf = next_line_buf;
 }
 
 fn byte_process_task(
@@ -100,87 +149,24 @@ fn byte_process_task(
         return Err(Error::new(kind, description));
     }
 
-    let mut processor_idx = 0;
-    let fmt = "%y-%m-%d %H:%M:%S%.3f";
     for msg in &msg_receiver {
         match msg {
             Msg::Exit => break,
-            Msg::SwitchToProcessor {
-                processor_idx: new_idx,
-            } => {
-                let ref mut p = processor_cache[processor_idx];
-                match &p.next_line_buf {
-                    NextLineBuf::Buf { instant, pre } => {
-                        println!(
-                            "{} r {} {}",
-                            p.processor_name,
-                            instant.format(fmt).to_string(),
-                            pre
-                        );
-                        p.next_line_buf = NextLineBuf::Empty;
-                    }
-                    NextLineBuf::Empty => {}
-                }
-                processor_idx = new_idx;
-            }
             Msg::Read {
                 processor_idx,
                 instant,
                 bytes,
             } => {
-                let ref mut p = processor_cache[processor_idx];
-                let cow = String::from_utf8_lossy(&bytes)
-                    .replace("\r\n", "\n")
-                    .replace("\n\r", "\n")
-                    .replace("\r", "\n");
-                let mut q: VecDeque<&str> = cow.split("\n").collect();
-                if let Some(first) = q.pop_front() {
-                    match &mut p.next_line_buf {
-                        NextLineBuf::Buf { instant: _, pre } => {
-                            pre.push_str(first);
-                        }
-                        NextLineBuf::Empty => {
-                            p.next_line_buf = NextLineBuf::Buf {
-                                instant,
-                                pre: first.into(),
-                            };
-                        }
-                    };
-                }
-                let next_line_buf = match q.pop_back() {
-                    Some(last) => NextLineBuf::Buf {
-                        instant,
-                        pre: last.into(),
-                    },
-                    None => NextLineBuf::Empty,
-                };
-                if let NextLineBuf::Buf { instant, pre } = &p.next_line_buf {
-                    println!(
-                        "{} r {} {}",
-                        p.processor_name,
-                        instant.format(fmt).to_string(),
-                        pre
-                    );
-                }
-                while let Some(next) = q.pop_front() {
-                    println!(
-                        "{} r {} {}",
-                        p.processor_name,
-                        instant.format(fmt).to_string(),
-                        next
-                    );
-                }
-                p.next_line_buf = next_line_buf;
+                read_msg(&mut processor_cache, processor_idx, instant, bytes);
             }
-            Msg::Write { instant, bytes } => {
+            Msg::Write { instant, bytes, processor_idx } => {
                 let ref mut p = processor_cache[processor_idx];
                 println!(
                     "{} w {} {}",
                     p.processor_name,
-                    instant.format(fmt).to_string(),
+                    instant.format(DATE_TIME_FMT).to_string(),
                     String::from_utf8_lossy(&bytes),
                 );
-                let _ = p.write_sender.send(WriteBuf::Buf(bytes));
             }
         }
     }
@@ -210,12 +196,13 @@ impl ProcessorConfig {
             let serial_port = builder.open()?;
             let processor_name = p.processor_name.borrow().clone();
             let msg_sender = msg_sender.clone();
+            let (write_sender, write_receiver) = channel();
 
             let mut processor_writer = ProcessorWriter {
                 history_path: format!("{} history.txt", processor_name),
                 editor: Editor::new(),
+                write_sender: write_sender.clone(),
                 processor_name: processor_name.clone(),
-                processor_idx,
             };
 
             if processor_writer
@@ -227,7 +214,6 @@ impl ProcessorConfig {
             }
             writers.push(processor_writer);
 
-            let (write_sender, write_receiver) = channel();
             processor_cache.push(ProcessorCache {
                 processor_name,
                 next_line_buf: NextLineBuf::Empty,
@@ -258,40 +244,24 @@ impl ProcessorConfig {
                 Ok(mut line) => {
                     writer.editor.add_history_entry(line.as_str());
                     line.push_str("\r");
+                    let _ = writer
+                        .write_sender
+                        .send(WriteBuf::Buf(line.as_bytes().into()));
                     let _ = msg_sender.send(Msg::Write {
                         bytes: line.as_bytes().into(),
                         instant: Utc::now(),
+                        processor_idx,
                     });
                 }
                 Err(ReadlineError::Interrupted) => {
+                    println!("> Exit loop");
                     break;
                 }
                 Err(ReadlineError::Eof) => {
-                    let prompt = "Enter nickname of processor to switch to: ";
-                    match proc_switcher_editor.readline(prompt) {
-                        Ok(processor_name) => {
-                            if let Some(w) =
-                                writers.iter().find(|w| w.processor_name == processor_name)
-                            {
-                                if processor_idx == w.processor_idx {
-                                    continue;
-                                }
-                                processor_idx = w.processor_idx;
-                                println!("Switching to '{}'", processor_name);
-                                let _ = msg_sender.send(Msg::SwitchToProcessor { processor_idx });
-                                proc_switcher_editor.add_history_entry(processor_name.as_str());
-                            } else {
-                                println!("No match for '{}'", processor_name);
-                            }
-                        }
-                        Err(ReadlineError::Interrupted | ReadlineError::Eof) => {
-                            break;
-                        }
-                        Err(err) => {
-                            println!("Error: {:?}", err);
-                            break;
-                        }
-                    }
+                    processor_idx += 1;
+                    processor_idx %= writers.len();
+                    let ref w = writers[processor_idx];
+                    println!("Switching to '{}'", w.processor_name);
                 }
                 Err(err) => {
                     println!("Error: {:?}", err);
@@ -300,6 +270,7 @@ impl ProcessorConfig {
             }
         }
 
+        println!("send exit");
         let _ = msg_sender.send(Msg::Exit);
         for mut e in writers {
             let _ = e.editor.save_history(&e.history_path);
