@@ -34,7 +34,10 @@ enum WriteBuf {
 }
 
 enum NextLineBuf {
-    Buf { instant: DateTime<Utc>, pre: String },
+    Buf {
+        instant: DateTime<Utc>,
+        line: String,
+    },
     Empty,
 }
 
@@ -62,30 +65,33 @@ fn serial_port_task(
     println!("> [serial_port_task] start {:?}", processor_name);
     let mut readbuf = [0u8; 0x100];
     loop {
-        if match serial_port.read(&mut readbuf) {
-            Err(_) => true,
-            Ok(0) => true,
-            Ok(count) => {
-                let _ = msg_sender.send(Msg::Read {
-                    processor_idx,
-                    instant: Utc::now(),
-                    bytes: Box::from(&readbuf[..count]),
-                });
-                false
+        let instant = Utc::now();
+        loop {
+            match serial_port.read(&mut readbuf) {
+                Err(e) => {
+                    let _ = e; // always fails in first few seconds
+                    break;
+                }
+                Ok(0) => break,
+                Ok(count) => {
+                    let _ = msg_sender.send(Msg::Read {
+                        processor_idx,
+                        instant,
+                        bytes: Box::from(&readbuf[..count]),
+                    });
+                }
             }
-        } {
-            let _rcved = match write_receiver.try_recv() {
+        }
+        loop {
+            match write_receiver.try_recv() {
                 Ok(WriteBuf::Exit) => {
-                    println!("> [serial_port_task] end {:?}", processor_name);
-                    break Ok(());
+                    return Ok(println!("> [serial_port_task] {:?} end", processor_name));
                 }
                 Ok(WriteBuf::Buf(msg)) => {
                     let _ = serial_port.write(&msg);
-                    true
                 }
-                _ => false,
-            };
-            // thread::sleep(Duration::from_millis(1));
+                _ => break,
+            }
         }
     }
 }
@@ -100,60 +106,47 @@ fn read_msg(
     bytes: Box<[u8]>,
 ) {
     let ref mut p = processor_cache[processor_idx];
+    let print_line = |instant: &DateTime<Utc>, line: &str| {
+        println!(
+            "{} r {} {}",
+            p.processor_name,
+            instant.format(DATE_TIME_FMT).to_string(),
+            line
+        );
+        let _ = line_sender.send(LogLine::Line {
+            processor_name: p.processor_name.clone(),
+            read_write: "r",
+            instant: instant.clone(),
+            line: line.to_string(),
+        });
+    };
     let payload = String::from_utf8_lossy(&bytes)
         .replace("\r\n", "\n")
         .replace("\n\r", "\n")
         .replace("\r", "\n");
     let mut q: VecDeque<&str> = payload.split("\n").collect();
     if let Some(first) = q.pop_front() {
-        match &mut p.next_line_buf {
-            NextLineBuf::Buf { instant: _, pre } => {
-                pre.push_str(first);
+        if let NextLineBuf::Buf { instant: _, line } = &mut p.next_line_buf {
+            line.push_str(first)
+        } else {
+            p.next_line_buf = NextLineBuf::Buf {
+                instant,
+                line: first.to_string(),
             }
-            NextLineBuf::Empty => {
-                p.next_line_buf = NextLineBuf::Buf {
-                    instant,
-                    pre: first.into(),
-                };
-            }
+        }
+    }
+    if let Some(last) = q.pop_back() {
+        if let NextLineBuf::Buf { instant, line } = &p.next_line_buf {
+            print_line(instant, line);
+        }
+        p.next_line_buf = NextLineBuf::Buf {
+            instant,
+            line: last.to_string(),
         };
     }
-    let next_line_buf = match q.pop_back() {
-        Some(last) => NextLineBuf::Buf {
-            instant,
-            pre: last.into(),
-        },
-        None => NextLineBuf::Empty,
-    };
-    if let NextLineBuf::Buf { instant, pre } = &p.next_line_buf {
-        println!(
-            "{} r {} {}",
-            p.processor_name,
-            instant.format(DATE_TIME_FMT).to_string(),
-            pre
-        );
-        let _ = line_sender.send(LogLine::Line {
-            processor_name: p.processor_name.clone(),
-            read_write: "r",
-            instant: instant.clone(),
-            line: pre.clone(),
-        });
-    }
     while let Some(next) = q.pop_front() {
-        println!(
-            "{} r {} {}",
-            p.processor_name,
-            instant.format(DATE_TIME_FMT).to_string(),
-            next
-        );
-        let _ = line_sender.send(LogLine::Line {
-            processor_name: p.processor_name.clone(),
-            read_write: "r",
-            instant: instant.clone(),
-            line: next.to_string(),
-        });
+        print_line(&instant, next);
     }
-    p.next_line_buf = next_line_buf;
 }
 
 fn byte_process_task(
@@ -245,7 +238,10 @@ impl ProcessorConfig {
                 .load_history(&processor_writer.history_path)
                 .is_err()
             {
-                println!("> [main_task] no previous history at {:?}", processor_writer.history_path);
+                println!(
+                    "> [main_task] no previous history at {:?}",
+                    processor_writer.history_path
+                );
             }
             writers.push(processor_writer);
 
@@ -277,7 +273,10 @@ impl ProcessorConfig {
             .load_history(proc_switcher_history_path)
             .is_err()
         {
-            println!("> [main_task] no previous history at {:?}", proc_switcher_history_path);
+            println!(
+                "> [main_task] no previous history at {:?}",
+                proc_switcher_history_path
+            );
         }
         processor_idx = 0;
         loop {
@@ -319,7 +318,7 @@ impl ProcessorConfig {
             let _ = e.editor.save_history(&e.history_path);
         }
         let _ = proc_switcher_editor.save_history(proc_switcher_history_path);
-        
+
         let _ = byte_process_thread.join();
         let _ = logger.join();
 

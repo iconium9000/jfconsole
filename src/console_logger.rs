@@ -1,8 +1,9 @@
 use std::{
     fs::{create_dir, OpenOptions},
+    io::Write,
     path::{Path, PathBuf},
     sync::mpsc::{channel, Receiver, Sender},
-    thread::{self, JoinHandle}, io::Write,
+    thread::{self, JoinHandle},
 };
 
 use chrono::{DateTime, Utc};
@@ -37,43 +38,55 @@ fn console_logger_task(
         Ok(opened_file) => {
             file = opened_file;
             println!("> [console_logger_task] opened {:?}", file_path);
-        },
+        }
         Err(e) => {
             println!("> [console_logger_task] error {:?}", e);
             return Err(Box::new(e));
-        },
+        }
     };
 
-    for line in receiver {
-        match line {
-            LogLine::Exit => break,
-            LogLine::Line {
-                processor_name,
-                read_write,
-                instant,
-                line,
-            } => {
-                let line = format!(
-                    "{} {} {} {}\r\n",
+    loop {
+        let mut exit = false;
+        let mut sync = false;
+        loop {
+            match receiver.try_recv() {
+                Err(_) => break,
+                Ok(LogLine::Exit) => {
+                    sync = true;
+                    exit = true;
+                }
+                Ok(LogLine::Line {
                     processor_name,
                     read_write,
-                    instant.format(DATE_TIME_FMT).to_string(),
-                    line
-                );
-                let buf = line.as_bytes();
-                if let Err(e) = file.write_all(buf) {
-                    println!("> [console_logger_task] write error {:#?}", e);
-                    return Err(Box::new(e))
-                }
-                if let Err(e) = file.sync_all() {
-                    println!("> [console_logger_task] sync error {:#?}", e);
-                    return Err(Box::new(e))
+                    instant,
+                    line,
+                }) => {
+                    sync = true;
+                    let line = format!(
+                        "{} {} {} {}\r\n",
+                        processor_name,
+                        read_write,
+                        instant.format(DATE_TIME_FMT).to_string(),
+                        line
+                    );
+                    let buf = line.as_bytes();
+                    if let Err(e) = file.write_all(buf) {
+                        println!("> [console_logger_task] write error {:#?}", e);
+                        return Err(Box::new(e));
+                    }
                 }
             }
         }
+        if sync {
+            if let Err(e) = file.sync_all() {
+                println!("> [console_logger_task] sync error {:#?}", e);
+                return Err(Box::new(e));
+            }
+        }
+        if exit {
+            return Ok(println!("> [console_logger_task] end {:?}", file_path));
+        }
     }
-    println!("> [console_logger_task] closing {:?}", file_path);
-    Ok(println!("> [console_logger_task] end"))
 }
 
 impl ConsoleLogger {
@@ -90,9 +103,9 @@ impl ConsoleLogger {
         let path = Path::new(&project_name);
         let _ = create_dir(path);
 
-        let fmt = "%y%m%d %H%M%S";
+        let fmt = "%y%m%d_%H%M%S";
         let now = Utc::now();
-        let file_name = format!("{} {}.log", project_name, now.format(fmt));
+        let file_name = format!("{}_{}.log", project_name, now.format(fmt));
         let file_path = path.join(Path::new(&file_name));
 
         let (sender, receiver) = channel();
