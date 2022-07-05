@@ -7,12 +7,13 @@ use serialport::{available_ports, SerialPortType, UsbPortInfo};
 use std::{
     cell::{Cell, RefCell},
     fs::{self, DirEntry, File},
-    io::{BufReader, Error as IOError, ErrorKind},
+    io::{BufReader, Error as IOError},
     num::ParseIntError,
     path::PathBuf,
     rc::Rc,
 };
 
+pub mod console_threads;
 pub mod user_io;
 
 pub type BuadRate = u32;

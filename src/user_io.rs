@@ -6,7 +6,7 @@ use std::{
 #[macro_export]
 macro_rules! raise_ioerr {
     ($msg:expr) => {
-        return Err(IOError::new(ErrorKind::Other, $msg))
+        return Err(std::io::Error::new(std::io::ErrorKind::Other, $msg))
     };
 }
 

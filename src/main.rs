@@ -5,9 +5,9 @@
 
 use jfconsole::ProcessorConfig;
 
-pub fn main() -> Result<(), std::io::Error> {
-    let cfg = ProcessorConfig::user_select()?;
-
-    println!("main completed successfully");
-    Ok(())
+pub fn main() {
+    ProcessorConfig::user_select()
+        .unwrap()
+        .start_threads()
+        .unwrap();
 }
