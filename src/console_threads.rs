@@ -13,7 +13,7 @@ use serialport::{Error, TTYPort};
 
 enum Msg {
     SwitchToProcessor {
-        processor_name: String,
+        processor_idx: usize,
     },
     Read {
         processor_idx: usize,
@@ -37,9 +37,15 @@ enum NextLineBuf {
     Empty,
 }
 
-struct ProcessorCache {
+struct ProcessorWriter {
+    editor: Editor<()>,
+    history_path: String,
     processor_name: String,
     processor_idx: usize,
+}
+
+struct ProcessorCache {
+    processor_name: String,
     next_line_buf: NextLineBuf,
     write_sender: Sender<WriteBuf>,
     join_handle: JoinHandle<Result<(), Error>>,
@@ -53,12 +59,7 @@ fn serial_port_task(
 ) -> Result<(), Error> {
     println!("start serial_port_task");
     let mut readbuf = [0u8; 0x100];
-    // let cr = "\r".as_bytes();
     loop {
-        // println!("hello there {}", processor_idx);
-        // let _ = serial_port.write(cr);
-        // thread::sleep(Duration::from_secs(1));
-
         let rcved = match write_receiver.try_recv() {
             Ok(WriteBuf::Exit) => {
                 println!("end serial_port_task for {}", processor_idx);
@@ -80,7 +81,6 @@ fn serial_port_task(
                     instant: Utc::now(),
                     bytes: Box::from(&readbuf[..count]),
                 });
-                // println!("serial_port_task send {:#?}", e);
                 !rcved
             }
         } {
@@ -104,16 +104,23 @@ fn byte_process_task(
     for msg in &msg_receiver {
         match msg {
             Msg::Exit => break,
-            Msg::SwitchToProcessor { processor_name } => {
-                let p = processor_cache
-                    .iter()
-                    .find(|p| p.processor_name == processor_name);
-                if let Some(p) = p {
-                    processor_idx = p.processor_idx;
-                    println!("Switching to '{}'", processor_name);
-                } else {
-                    println!("No match for '{}'", processor_name);
+            Msg::SwitchToProcessor {
+                processor_idx: new_idx,
+            } => {
+                let ref mut p = processor_cache[processor_idx];
+                match &p.next_line_buf {
+                    NextLineBuf::Buf { instant, pre } => {
+                        println!(
+                            "{} r {} {}",
+                            p.processor_name,
+                            instant.format(fmt).to_string(),
+                            pre
+                        );
+                        p.next_line_buf = NextLineBuf::Empty;
+                    }
+                    NextLineBuf::Empty => {}
                 }
+                processor_idx = new_idx;
             }
             Msg::Read {
                 processor_idx,
@@ -191,6 +198,7 @@ impl ProcessorConfig {
     pub fn start_threads(self) -> Result<(), Error> {
         let (msg_sender, msg_receiver) = channel();
         let mut processor_cache = vec![];
+        let mut writers = vec![];
 
         let mut processor_idx = 0;
         for p in &self.processors {
@@ -202,10 +210,25 @@ impl ProcessorConfig {
             let processor_name = p.processor_name.borrow().clone();
             let msg_sender = msg_sender.clone();
 
+            let mut processor_writer = ProcessorWriter {
+                history_path: format!("{} history.txt", processor_name),
+                editor: Editor::new(),
+                processor_name: processor_name.clone(),
+                processor_idx,
+            };
+
+            if processor_writer
+                .editor
+                .load_history(&processor_writer.history_path)
+                .is_err()
+            {
+                println!("No previous history at '{}'", processor_writer.history_path);
+            }
+            writers.push(processor_writer);
+
             let (write_sender, write_receiver) = channel();
             processor_cache.push(ProcessorCache {
                 processor_name,
-                processor_idx,
                 next_line_buf: NextLineBuf::Empty,
                 write_sender,
                 join_handle: thread::spawn(move || {
@@ -219,14 +242,20 @@ impl ProcessorConfig {
         let byte_process_thread =
             thread::spawn(move || byte_process_task(msg_receiver, processor_cache));
 
-        let mut rl = Editor::<()>::new();
-        if rl.load_history("history.txt").is_err() {
-            println!("No previous history.");
+        let mut proc_switcher_editor = Editor::<()>::new();
+        let proc_switcher_history_path = "history.txt";
+        if proc_switcher_editor
+            .load_history(proc_switcher_history_path)
+            .is_err()
+        {
+            println!("No previous history at '{}'", proc_switcher_history_path);
         }
+        processor_idx = 0;
         loop {
-            match rl.readline("") {
+            let ref mut writer = writers[processor_idx];
+            match writer.editor.readline("") {
                 Ok(mut line) => {
-                    rl.add_history_entry(line.as_str());
+                    writer.editor.add_history_entry(line.as_str());
                     line.push_str("\r");
                     let _ = msg_sender.send(Msg::Write {
                         bytes: line.as_bytes().into(),
@@ -237,10 +266,22 @@ impl ProcessorConfig {
                     break;
                 }
                 Err(ReadlineError::Eof) => {
-                    match rl.readline("Enter nickname of processor to switch to: ") {
+                    let prompt = "Enter nickname of processor to switch to: ";
+                    match proc_switcher_editor.readline(prompt) {
                         Ok(processor_name) => {
-                            rl.add_history_entry(processor_name.as_str());
-                            let _ = msg_sender.send(Msg::SwitchToProcessor { processor_name });
+                            if let Some(w) =
+                                writers.iter().find(|w| w.processor_name == processor_name)
+                            {
+                                if processor_idx == w.processor_idx {
+                                    continue;
+                                }
+                                processor_idx = w.processor_idx;
+                                println!("Switching to '{}'", processor_name);
+                                let _ = msg_sender.send(Msg::SwitchToProcessor { processor_idx });
+                                proc_switcher_editor.add_history_entry(processor_name.as_str());
+                            } else {
+                                println!("No match for '{}'", processor_name);
+                            }
                         }
                         Err(ReadlineError::Interrupted | ReadlineError::Eof) => {
                             break;
@@ -257,9 +298,12 @@ impl ProcessorConfig {
                 }
             }
         }
-        rl.save_history("history.txt").unwrap();
 
         let _ = msg_sender.send(Msg::Exit);
+        for mut e in writers {
+            let _ = e.editor.save_history(&e.history_path);
+        }
+        let _ = proc_switcher_editor.save_history(proc_switcher_history_path);
         let _ = byte_process_thread.join();
 
         Ok(())

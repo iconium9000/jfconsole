@@ -27,3 +27,8 @@ f7
 f4
 help
 ls 2:/2022 -r
+help
+f4
+f7
+f4
+f7
