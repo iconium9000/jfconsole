@@ -12,3 +12,9 @@ ls 2:/2022/07 -r
 asdf
 ls 2:/2022 -r
 help
+?
+gtime
+gps
+help
+ls 2:/2022 -r
+cat 2:/2022/06/17/charger/C20220617233321_65535.json

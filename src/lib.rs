@@ -15,6 +15,7 @@ use std::{
 };
 use user_io::RaisedError;
 
+pub mod console_logger;
 pub mod console_threads;
 pub mod user_io;
 
@@ -318,7 +319,7 @@ impl Processor {
         let mut baudrate = 0;
         while baudrate == 0 {
             println!(
-                "Baud rates options for {:?} port '{:?}':",
+                "Baud rates options for {:?} port {:?}:",
                 processor_name,
                 self.port_name,
             );

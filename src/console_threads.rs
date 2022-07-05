@@ -7,7 +7,10 @@ use std::{
     time::Duration,
 };
 
-use crate::ProcessorConfig;
+use crate::{
+    console_logger::{ConsoleLogger, LogLine},
+    ProcessorConfig,
+};
 use rustyline::{error::ReadlineError, Editor};
 use serialport::{Error, SerialPort};
 
@@ -46,7 +49,7 @@ struct ProcessorCache {
     processor_name: String,
     next_line_buf: NextLineBuf,
     write_sender: Sender<WriteBuf>,
-    join_handle: JoinHandle<Result<(), Error>>,
+    join_handle: JoinHandle<Result<(), Box<dyn std::error::Error + Send>>>,
 }
 
 fn serial_port_task(
@@ -54,7 +57,7 @@ fn serial_port_task(
     processor_idx: usize,
     msg_sender: Sender<Msg>,
     write_receiver: Receiver<WriteBuf>,
-) -> Result<(), Error> {
+) -> Result<(), Box<dyn std::error::Error + Send>> {
     println!("start serial_port_task");
     let mut readbuf = [0u8; 0x100];
     loop {
@@ -86,20 +89,21 @@ fn serial_port_task(
     }
 }
 
-const DATE_TIME_FMT: &'static str = "%y-%m-%d %H:%M:%S%.3f";
+pub const DATE_TIME_FMT: &'static str = "%y-%m-%d %H:%M:%S%.3f";
 
 fn read_msg(
     processor_cache: &mut Vec<ProcessorCache>,
+    line_sender: &Sender<LogLine>,
     processor_idx: usize,
     instant: DateTime<Utc>,
     bytes: Box<[u8]>,
 ) {
     let ref mut p = processor_cache[processor_idx];
-    let cow = String::from_utf8_lossy(&bytes)
+    let payload = String::from_utf8_lossy(&bytes)
         .replace("\r\n", "\n")
         .replace("\n\r", "\n")
         .replace("\r", "\n");
-    let mut q: VecDeque<&str> = cow.split("\n").collect();
+    let mut q: VecDeque<&str> = payload.split("\n").collect();
     if let Some(first) = q.pop_front() {
         match &mut p.next_line_buf {
             NextLineBuf::Buf { instant: _, pre } => {
@@ -127,6 +131,12 @@ fn read_msg(
             instant.format(DATE_TIME_FMT).to_string(),
             pre
         );
+        let _ = line_sender.send(LogLine::Line {
+            processor_name: p.processor_name.clone(),
+            read_write: "r",
+            instant: instant.clone(),
+            line: pre.clone(),
+        });
     }
     while let Some(next) = q.pop_front() {
         println!(
@@ -135,12 +145,19 @@ fn read_msg(
             instant.format(DATE_TIME_FMT).to_string(),
             next
         );
+        let _ = line_sender.send(LogLine::Line {
+            processor_name: p.processor_name.clone(),
+            read_write: "r",
+            instant: instant.clone(),
+            line: next.to_string(),
+        });
     }
     p.next_line_buf = next_line_buf;
 }
 
 fn byte_process_task(
     msg_receiver: Receiver<Msg>,
+    line_sender: Sender<LogLine>,
     mut processor_cache: Vec<ProcessorCache>,
 ) -> Result<(), Error> {
     if processor_cache.is_empty() {
@@ -157,9 +174,19 @@ fn byte_process_task(
                 instant,
                 bytes,
             } => {
-                read_msg(&mut processor_cache, processor_idx, instant, bytes);
+                read_msg(
+                    &mut processor_cache,
+                    &line_sender,
+                    processor_idx,
+                    instant,
+                    bytes,
+                );
             }
-            Msg::Write { instant, bytes, processor_idx } => {
+            Msg::Write {
+                instant,
+                bytes,
+                processor_idx,
+            } => {
                 let ref mut p = processor_cache[processor_idx];
                 println!(
                     "{} w {} {}",
@@ -167,6 +194,12 @@ fn byte_process_task(
                     instant.format(DATE_TIME_FMT).to_string(),
                     String::from_utf8_lossy(&bytes),
                 );
+                let _ = line_sender.send(LogLine::Line {
+                    processor_name: p.processor_name.clone(),
+                    read_write: "w",
+                    instant,
+                    line: String::from_utf8_lossy(&bytes).to_string(),
+                });
             }
         }
     }
@@ -182,10 +215,13 @@ fn byte_process_task(
 }
 
 impl ProcessorConfig {
-    pub fn start_threads(self) -> Result<(), Error> {
+    pub fn start_threads(self) -> Result<(), Box<dyn std::error::Error>> {
         let (msg_sender, msg_receiver) = channel();
         let mut processor_cache = vec![];
         let mut writers = vec![];
+
+        let project_name = String::clone(&self.project_name);
+        let logger = ConsoleLogger::new(project_name)?;
 
         let mut processor_idx = 0;
         for p in &self.processors {
@@ -226,8 +262,9 @@ impl ProcessorConfig {
             processor_idx += 1;
         }
 
+        let line_sender = logger.sender();
         let byte_process_thread =
-            thread::spawn(move || byte_process_task(msg_receiver, processor_cache));
+            thread::spawn(move || byte_process_task(msg_receiver, line_sender, processor_cache));
 
         let mut proc_switcher_editor = Editor::<()>::new();
         let proc_switcher_history_path = "history.txt";
@@ -271,12 +308,14 @@ impl ProcessorConfig {
         }
 
         println!("send exit");
+        let _ = logger.exit();
         let _ = msg_sender.send(Msg::Exit);
         for mut e in writers {
             let _ = e.editor.save_history(&e.history_path);
         }
         let _ = proc_switcher_editor.save_history(proc_switcher_history_path);
         let _ = byte_process_thread.join();
+        let _ = logger.join();
 
         Ok(())
     }
