@@ -1,4 +1,4 @@
-use crate::{file_logger_thread::LogLine, ProcessorInfo};
+use crate::{file_logger_thread::LogLine, main_thread::ProcessorInfo};
 use chrono::{DateTime, Utc};
 use std::{
     collections::VecDeque,
@@ -33,52 +33,43 @@ pub const DATE_TIME_FMT: &'static str = "%y-%m-%d %H:%M:%S%.3f";
 pub struct ProcessorByteCache {
     processor_name: String,
     next_line_buf: NextLineBuf,
-    line_sender: Sender<LogLine>,
+    logline_sender: Sender<LogLine>,
 }
 
 impl ProcessorByteCache {
-    pub fn new(processor_info: &ProcessorInfo, line_sender: Sender<LogLine>) -> Self {
+    pub fn new(processor_info: &ProcessorInfo, logline_sender: Sender<LogLine>) -> Self {
         Self {
             processor_name: processor_info.processor_name.clone(),
             next_line_buf: NextLineBuf::Empty,
-            line_sender,
+            logline_sender,
         }
     }
 }
 
 impl ProcessorByteCache {
-    pub fn write_msg(&mut self, instant: DateTime<Utc>, bytes: Box<[u8]>) {
+    fn send_msg(&self, read_write: &'static str, instant: &DateTime<Utc>, line: &str) {
+        let processor_name = self.processor_name.clone();
         println!(
-            "{} w {} {}",
+            "{} {} {} {}",
             self.processor_name,
+            read_write,
             instant.format(DATE_TIME_FMT).to_string(),
-            String::from_utf8_lossy(&bytes),
+            line,
         );
-        let _ = self.line_sender.send(LogLine::Line {
-            processor_name: self.processor_name.clone(),
-            read_write: "w",
-            instant,
-            line: String::from_utf8_lossy(&bytes).to_string(),
+        let _ = self.logline_sender.send(LogLine::Line {
+            processor_name,
+            read_write,
+            instant: instant.clone(),
+            line: line.to_string(),
         });
     }
-}
 
-impl ProcessorByteCache {
-    pub fn read_msg(&mut self, instant: DateTime<Utc>, bytes: Box<[u8]>) {
-        let print_line = |instant: &DateTime<Utc>, line: &str| {
-            println!(
-                "{} r {} {}",
-                self.processor_name,
-                instant.format(DATE_TIME_FMT).to_string(),
-                line
-            );
-            let _ = self.line_sender.send(LogLine::Line {
-                processor_name: self.processor_name.clone(),
-                read_write: "r",
-                instant: instant.clone(),
-                line: line.to_string(),
-            });
-        };
+    fn write_msg(&self, instant: DateTime<Utc>, bytes: Box<[u8]>) {
+        let line = String::from_utf8_lossy(&bytes);
+        self.send_msg("w", &instant, &line);
+    }
+
+    fn read_msg(&mut self, instant: DateTime<Utc>, bytes: Box<[u8]>) {
         let payload = String::from_utf8_lossy(&bytes)
             .replace("\r\n", "\n")
             .replace("\n\r", "\n")
@@ -96,7 +87,7 @@ impl ProcessorByteCache {
         }
         if let Some(last) = q.pop_back() {
             if let NextLineBuf::Buf { instant, line } = &self.next_line_buf {
-                print_line(instant, line);
+                self.send_msg("r", instant, line);
             }
             self.next_line_buf = NextLineBuf::Buf {
                 instant,
@@ -104,7 +95,7 @@ impl ProcessorByteCache {
             };
         }
         while let Some(next) = q.pop_front() {
-            print_line(&instant, next);
+            self.send_msg("r", &instant, next);
         }
     }
 }
@@ -127,9 +118,6 @@ impl ByteProcessThread {
             }),
         }
     }
-}
-
-impl ByteProcessThread {
     pub fn join(self) {
         let _ = self.msg_sender.send(Msg::Exit);
         let _ = self.join_handle.join();
@@ -155,6 +143,5 @@ pub fn byte_process_task(
             } => processor_byte_caches[processor_idx].write_msg(instant, bytes),
         }
     }
-
     println!("> [byte_process_task] end")
 }

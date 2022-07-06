@@ -6,8 +6,8 @@ use std::{
 };
 
 use crate::{
+    main_thread::{BuadRate, Config, ProcessorInfo},
     user_io::{read_and_parse_user_entry, RaisedError, ReadAndParseUserEntryRes},
-    BuadRate, Config, ProcessorInfo,
 };
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -24,7 +24,7 @@ pub struct ProcessorInfoDto {
 }
 
 impl ProcessorInfo {
-    fn dto(&self) -> ProcessorInfoDto {
+    fn to_dto(&self) -> ProcessorInfoDto {
         ProcessorInfoDto {
             processor_name: self.processor_name.clone(),
             baudrate: self.baudrate,
@@ -77,7 +77,7 @@ impl Config {
     pub fn save_config_file(self) -> Result<Self, Box<dyn std::error::Error>> {
         let ref value = ConfigDto {
             project_name: self.project_name.clone(),
-            processors: self.processors.iter().map(|p| p.dto()).collect(),
+            processors: self.processors.iter().map(|p| p.to_dto()).collect(),
         };
 
         let contents = serde_json::to_string_pretty(value)?;
@@ -105,8 +105,8 @@ impl Config {
                     Err(e) => Err(Box::new(e)),
                 }
             }
-            Some(_) => Err(RaisedError::new("bad ext")),
             None => Err(RaisedError::new("no ext")),
+            _ => Err(RaisedError::new("bad ext")),
         }
     }
 }

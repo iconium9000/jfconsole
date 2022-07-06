@@ -1,4 +1,4 @@
-use crate::{byte_process_thread::Msg, ProcessorInfo};
+use crate::{byte_process_thread::Msg, main_thread::ProcessorInfo};
 use chrono::Utc;
 use serialport::SerialPort;
 use std::{
@@ -63,16 +63,12 @@ pub fn serial_port_task(
     msg_sender: Sender<Msg>,
     write_receiver: Receiver<WriteBuf>,
 ) -> Result<(), Box<dyn std::error::Error + Send>> {
-    println!("> [serial_port_task] start {:?}", processor_name);
-    let mut readbuf = [0u8; 0x100];
+    println!("> [serial_port_task] {} start", processor_name);
+    let mut readbuf = [0u8; 0x1000];
     loop {
         let instant = Utc::now();
         loop {
             match serial_port.read(&mut readbuf) {
-                Err(e) => {
-                    let _ = e; // always fails in first few seconds
-                    break;
-                }
                 Ok(0) => break,
                 Ok(count) => {
                     let _ = msg_sender.send(Msg::Read {
@@ -81,15 +77,26 @@ pub fn serial_port_task(
                         bytes: Box::from(&readbuf[..count]),
                     });
                 }
+                Err(e) => {
+                    // println!("> [serial_port_task] {} read error {:?}", processor_name, e);
+                    let _ = e; // always fails in first few seconds
+                    break;
+                }
             }
         }
         loop {
             match write_receiver.try_recv() {
                 Ok(WriteBuf::Exit) => {
-                    return Ok(println!("> [serial_port_task] {:?} end", processor_name));
+                    return Ok(println!("> [serial_port_task] {} end", processor_name));
                 }
                 Ok(WriteBuf::Buf(msg)) => {
-                    let _ = serial_port.write(&msg);
+                    let e = serial_port.write(&msg);
+                    if e.is_err() {
+                        println!(
+                            "> [serial_port_task] {} write error {:?}",
+                            processor_name, e
+                        );
+                    }
                 }
                 _ => break,
             }

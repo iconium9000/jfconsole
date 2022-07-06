@@ -1,29 +1,40 @@
-use std::sync::mpsc::Sender;
-
+use crate::{byte_process_thread::Msg, main_thread::ProcessorInfo, serial_port_thread::WriteBuf};
 use chrono::Utc;
 use rustyline::{error::ReadlineError, Editor};
-
-use crate::{byte_process_thread::Msg, serial_port_thread::WriteBuf, ProcessorInfo};
+use std::{
+    path::{Path, PathBuf},
+    sync::mpsc::Sender,
+};
 
 pub struct ProcesserUserConsoleWriter {
     editor: Editor<()>,
-    history_path: String,
+    history_path: PathBuf,
     processor_name: String,
     write_sender: Sender<WriteBuf>,
 }
 
 impl ProcesserUserConsoleWriter {
-    pub fn new(processor_info: &ProcessorInfo, write_sender: Sender<WriteBuf>) -> Self {
+    pub fn new(
+        project_path: &Path,
+        processor_info: &ProcessorInfo,
+        write_sender: Sender<WriteBuf>,
+    ) -> Self {
+        let history_filename = format!("{} cmd history.txt", processor_info.processor_name);
         let mut writer = ProcesserUserConsoleWriter {
-            history_path: format!("{} history.txt", processor_info.processor_name),
+            history_path: project_path.join(Path::new(&history_filename)),
             editor: Editor::new(),
             write_sender,
             processor_name: processor_info.processor_name.clone(),
         };
         if writer.editor.load_history(&writer.history_path).is_err() {
             println!(
-                "> [main_task] no previous history at {:?}",
-                writer.history_path
+                "> [user_console_task] no previous {} cmd history at {:?}",
+                writer.processor_name, writer.history_path,
+            );
+        } else {
+            println!(
+                "> [user_console_task] recovered {} cmd history from {:?}",
+                writer.processor_name, writer.history_path,
             );
         }
         writer
@@ -32,7 +43,17 @@ impl ProcesserUserConsoleWriter {
 
 impl ProcesserUserConsoleWriter {
     pub fn save_history(mut self) {
-        let _ = self.editor.save_history(&self.history_path);
+        if let Err(e) = self.editor.save_history(&self.history_path) {
+            println!(
+                "> [user_console_task] saving {} cmd history failed with {:?}",
+                self.processor_name, e
+            );
+        } else {
+            println!(
+                "> [user_console_task] saved {} cmd history to {:?}",
+                self.processor_name, self.history_path
+            )
+        }
     }
 }
 

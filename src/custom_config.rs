@@ -1,11 +1,64 @@
-use std::path::PathBuf;
-
-use rustyline::Editor;
-
 use crate::{
+    main_thread::{Config, ProcessorInfo},
     user_io::{read_and_parse_user_entry, ReadAndParseUserEntryRes},
-    Config, ProcessorInfo, UserSelectConfigRes,
 };
+use rustyline::{error::ReadlineError, Editor};
+use std::{num::ParseIntError, path::PathBuf};
+
+pub enum UserSelectConfigRes {
+    Proc(ProcessorInfo),
+    NoneRemaining,
+    EntryOutOfRange,
+    EmptyEntry,
+    ParseErr {
+        e: ParseIntError,
+        user_entry: String,
+    },
+    IOErr(std::io::Error),
+    ReadErr(ReadlineError),
+}
+
+impl ProcessorInfo {
+    pub fn user_config(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        println!("> Selected {}\n", self.port_name);
+
+        let mut editor = Editor::<()>::new();
+        let prompt = "Enter nickname for processor: ";
+        let op = |e| Err(Box::new(e));
+        self.processor_name = editor.readline(prompt).or_else(op)?;
+        println!(
+            "> Nicknamed {} as {}\n",
+            self.port_name, self.processor_name
+        );
+
+        self.baudrate = loop {
+            println!(
+                "Baud rates options for {:?} port {:?}:",
+                self.processor_name, self.port_name,
+            );
+            println!("1) 115200");
+            println!("2) 3000000");
+            println!("_) custom value");
+
+            match read_and_parse_user_entry("Enter 1, 2, or a custom value") {
+                ReadAndParseUserEntryRes::ParseErr { e, user_entry } => {
+                    println!("> Invalid Entry {:?} {:?}\n", user_entry, e);
+                }
+                ReadAndParseUserEntryRes::IOErr(e) => return Err(Box::new(e)),
+                ReadAndParseUserEntryRes::ReadErr(e) => return Err(Box::new(e)),
+                ReadAndParseUserEntryRes::Ok(0) => println!("> Invalid Entry, try again\n"),
+                ReadAndParseUserEntryRes::EmptyEntry => println!("> Empty Entry, try again\n"),
+                ReadAndParseUserEntryRes::Ok(1) => break 115200,
+                ReadAndParseUserEntryRes::Ok(2) => break 3000000,
+                ReadAndParseUserEntryRes::Ok(baud_rate) => break baud_rate,
+            }
+        };
+        Ok(println!(
+            "> Set baudrate of {:?} as {}\n",
+            self.processor_name, self.baudrate
+        ))
+    }
+}
 
 impl ProcessorInfo {
     pub fn user_select(procs: &mut Vec<ProcessorInfo>) -> UserSelectConfigRes {
@@ -30,65 +83,6 @@ impl ProcessorInfo {
             ReadAndParseUserEntryRes::ReadErr(e) => UserSelectConfigRes::ReadErr(e),
             ReadAndParseUserEntryRes::EmptyEntry => UserSelectConfigRes::EmptyEntry,
         }
-    }
-}
-
-impl ProcessorInfo {
-    pub fn user_config(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        println!("> Selected {}\n", self.port_name);
-
-        let mut editor = Editor::<()>::new();
-        let prompt = "Enter nickname for processor: ";
-        let op = |e| Err(Box::new(e));
-        self.processor_name = editor.readline(prompt).or_else(op)?;
-        println!(
-            "> Nicknamed {} as {}\n",
-            self.port_name, self.processor_name
-        );
-
-        self.baudrate = 0;
-        while self.baudrate == 0 {
-            println!(
-                "Baud rates options for {:?} port {:?}:",
-                self.processor_name, self.port_name,
-            );
-            println!("1) 115200");
-            println!("2) 3000000");
-            println!("_) custom value");
-
-            match read_and_parse_user_entry("Enter 1, 2, or a custom value") {
-                ReadAndParseUserEntryRes::IOErr(e) => {
-                    return Err(Box::new(e));
-                }
-                ReadAndParseUserEntryRes::ReadErr(e) => {
-                    return Err(Box::new(e));
-                }
-                ReadAndParseUserEntryRes::Ok(0) => {
-                    println!("> Invalid Entry, try again\n");
-                }
-                ReadAndParseUserEntryRes::Ok(1) => {
-                    self.baudrate = 115200;
-                }
-                ReadAndParseUserEntryRes::Ok(2) => {
-                    self.baudrate = 3000000;
-                }
-                ReadAndParseUserEntryRes::Ok(e) => {
-                    self.baudrate = e;
-                }
-                ReadAndParseUserEntryRes::EmptyEntry => {
-                    println!("> Empty Entry, try again\n");
-                }
-                ReadAndParseUserEntryRes::ParseErr { e, user_entry } => {
-                    println!("> Invalid Entry {:?} {:?}\n", user_entry, e);
-                }
-            }
-        }
-        println!(
-            "> Set baudrate of {:?} as {}\n",
-            self.processor_name, self.baudrate
-        );
-
-        Ok(())
     }
 }
 

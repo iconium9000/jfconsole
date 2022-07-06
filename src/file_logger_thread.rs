@@ -19,16 +19,16 @@ pub enum LogLine {
 }
 
 pub struct FileLoggerThread {
-    sender: Sender<LogLine>,
+    logline_sender: Sender<LogLine>,
     join_handle: JoinHandle<Result<(), Box<dyn std::any::Any + Send>>>,
 }
 
 impl FileLoggerThread {
-    pub fn line_sender(&self) -> Sender<LogLine> {
-        self.sender.clone()
+    pub fn logline_sender(&self) -> Sender<LogLine> {
+        self.logline_sender.clone()
     }
-    pub fn spawn(project_name: String) -> Result<FileLoggerThread, Box<dyn std::error::Error>> {
-        let path = Path::new(&project_name);
+    pub fn spawn(project_name: &str) -> Result<FileLoggerThread, Box<dyn std::error::Error>> {
+        let path = Path::new(project_name);
         let _ = create_dir(path);
 
         let fmt = "%y%m%d_%H%M%S";
@@ -36,16 +36,14 @@ impl FileLoggerThread {
         let file_name = format!("{}_{}.log", project_name, now.format(fmt));
         let file_path = path.join(Path::new(&file_name));
 
-        let (sender, receiver) = channel();
-        let task = move || file_logger_task(file_path, receiver);
-        let join_handle = thread::spawn(task);
+        let (logline_sender, logline_receiver) = channel();
         Ok(FileLoggerThread {
-            join_handle,
-            sender,
+            logline_sender,
+            join_handle: thread::spawn(move || file_logger_task(file_path, logline_receiver)),
         })
     }
     pub fn join(self) {
-        let _ = self.sender.send(LogLine::Exit);
+        let _ = self.logline_sender.send(LogLine::Exit);
         let _ = self.join_handle.join();
     }
 }
@@ -106,11 +104,11 @@ fn file_logger_task(
         if sync {
             if let Err(e) = file.sync_all() {
                 println!("> [file_logger_task] sync error {:#?}", e);
-                return Err(Box::new(e));
+                break Err(Box::new(e));
             }
         }
         if exit {
-            return Ok(println!("> [file_logger_task] end {:?}", file_path));
+            break Ok(println!("> [file_logger_task] end {:?}", file_path));
         }
     }
 }
