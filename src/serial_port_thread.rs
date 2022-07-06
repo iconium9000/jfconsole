@@ -1,4 +1,7 @@
-use crate::{byte_process_thread::Msg, main_thread::ProcessorInfo};
+use crate::{
+    byte_process_thread::Msg,
+    main_thread::{set_thread_priority, ProcessorInfo, SERIAL_PORT_THREAD_PRIORITY},
+};
 use chrono::Utc;
 use serialport::SerialPort;
 use std::{
@@ -63,6 +66,8 @@ pub fn serial_port_task(
     msg_sender: Sender<Msg>,
     write_receiver: Receiver<WriteBuf>,
 ) -> Result<(), Box<dyn std::error::Error + Send>> {
+    set_thread_priority::<SERIAL_PORT_THREAD_PRIORITY>();
+
     println!("> [serial_port_task] {} start", processor_name);
     let mut readbuf = [0u8; 0x1000];
     loop {

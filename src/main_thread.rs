@@ -1,5 +1,3 @@
-use serialport::{UsbPortInfo, SerialPortType, available_ports};
-
 use crate::{
     byte_process_thread::{ByteProcessThread, ProcessorByteCache},
     file_logger_thread::FileLoggerThread,
@@ -7,10 +5,26 @@ use crate::{
     serial_port_thread::SerialConsoleThread,
     user_console_thread::{user_console_task, ProcesserUserConsoleWriter},
 };
-use std::{sync::mpsc::channel, path::{PathBuf, Path}};
+use serialport::{available_ports, SerialPortType, UsbPortInfo};
+use std::{
+    path::{Path, PathBuf},
+    sync::mpsc::channel,
+};
+use thread_priority::ThreadPriority;
 
 pub type BuadRate = u32;
 pub const DEFAULT_BAUDRATE: BuadRate = 115_200;
+
+pub const BYTE_PROCESS_THREAD_PRIORITY: u8 = 0;
+pub const SERIAL_PORT_THREAD_PRIORITY: u8 = 1;
+pub const USER_CONSOLE_THREAD_PRIORITY: u8 = 2;
+pub const FILE_LOGGER_THREAD_PRIORITY: u8 = 3;
+
+pub fn set_thread_priority<const PRIORITY: u8>() {
+    ThreadPriority::Crossplatform(PRIORITY.try_into().unwrap())
+        .set_for_current()
+        .unwrap();
+}
 
 pub struct ProcessorInfo {
     pub port_name: String,
@@ -63,6 +77,8 @@ impl ProcessorInfo {
 }
 
 pub fn main_task() -> Result<(), Box<dyn std::error::Error>> {
+    println!("Welcome!\n\n");
+
     let procs = ProcessorInfo::available_processors()?;
     if procs.is_empty() {
         return Ok(println!("> [main_task] No com ports found"));
@@ -77,7 +93,10 @@ pub fn main_task() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
     if cfg.processors.is_empty() {
-        return Ok(println!("> [main_task] no processors in config {:?}", cfg.project_path));
+        return Ok(println!(
+            "> [main_task] no processors in config {:?}",
+            cfg.project_path
+        ));
     }
 
     let mut serial_console_threads = vec![];

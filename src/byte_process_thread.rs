@@ -1,4 +1,4 @@
-use crate::{file_logger_thread::LogLine, main_thread::ProcessorInfo};
+use crate::{file_logger_thread::LogLine, main_thread::{ProcessorInfo, set_thread_priority, BYTE_PROCESS_THREAD_PRIORITY}};
 use chrono::{DateTime, Utc};
 use std::{
     collections::VecDeque,
@@ -128,6 +128,8 @@ pub fn byte_process_task(
     msg_receiver: Receiver<Msg>,
     mut processor_byte_caches: Vec<ProcessorByteCache>,
 ) {
+    set_thread_priority::<BYTE_PROCESS_THREAD_PRIORITY>();
+
     for msg in &msg_receiver {
         match msg {
             Msg::Exit => break,

@@ -1,4 +1,4 @@
-use crate::{byte_process_thread::Msg, main_thread::ProcessorInfo, serial_port_thread::WriteBuf};
+use crate::{byte_process_thread::Msg, main_thread::{ProcessorInfo, set_thread_priority, USER_CONSOLE_THREAD_PRIORITY}, serial_port_thread::WriteBuf};
 use chrono::Utc;
 use rustyline::{error::ReadlineError, Editor};
 use std::{
@@ -58,6 +58,8 @@ impl ProcesserUserConsoleWriter {
 }
 
 pub fn user_console_task(writers: &mut Vec<ProcesserUserConsoleWriter>, msg_sender: &Sender<Msg>) {
+    set_thread_priority::<USER_CONSOLE_THREAD_PRIORITY>();
+
     let mut processor_idx = 0;
     loop {
         let ref mut writer = writers[processor_idx];

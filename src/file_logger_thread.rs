@@ -1,4 +1,4 @@
-use crate::byte_process_thread::DATE_TIME_FMT;
+use crate::{byte_process_thread::DATE_TIME_FMT, main_thread::{FILE_LOGGER_THREAD_PRIORITY, set_thread_priority}};
 use chrono::{DateTime, Utc};
 use std::{
     fs::{create_dir, OpenOptions},
@@ -52,6 +52,8 @@ fn file_logger_task(
     file_path: PathBuf,
     receiver: Receiver<LogLine>,
 ) -> Result<(), Box<dyn std::any::Any + Send>> {
+    set_thread_priority::<FILE_LOGGER_THREAD_PRIORITY>();
+
     let mut file;
     match OpenOptions::new()
         .create(true)
