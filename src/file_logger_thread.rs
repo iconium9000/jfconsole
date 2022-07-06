@@ -1,14 +1,12 @@
+use crate::byte_process_thread::DATE_TIME_FMT;
+use chrono::{DateTime, Utc};
 use std::{
     fs::{create_dir, OpenOptions},
     io::Write,
     path::{Path, PathBuf},
     sync::mpsc::{channel, Receiver, Sender},
-    thread::{self, JoinHandle},
+    thread::{self, yield_now, JoinHandle},
 };
-
-use chrono::{DateTime, Utc};
-
-use crate::console_threads::DATE_TIME_FMT;
 
 pub enum LogLine {
     Exit,
@@ -20,12 +18,39 @@ pub enum LogLine {
     },
 }
 
-pub struct ConsoleLogger {
+pub struct FileLoggerThread {
     sender: Sender<LogLine>,
     join_handle: JoinHandle<Result<(), Box<dyn std::any::Any + Send>>>,
 }
 
-fn console_logger_task(
+impl FileLoggerThread {
+    pub fn line_sender(&self) -> Sender<LogLine> {
+        self.sender.clone()
+    }
+    pub fn spawn(project_name: String) -> Result<FileLoggerThread, Box<dyn std::error::Error>> {
+        let path = Path::new(&project_name);
+        let _ = create_dir(path);
+
+        let fmt = "%y%m%d_%H%M%S";
+        let now = Utc::now();
+        let file_name = format!("{}_{}.log", project_name, now.format(fmt));
+        let file_path = path.join(Path::new(&file_name));
+
+        let (sender, receiver) = channel();
+        let task = move || file_logger_task(file_path, receiver);
+        let join_handle = thread::spawn(task);
+        Ok(FileLoggerThread {
+            join_handle,
+            sender,
+        })
+    }
+    pub fn join(self) {
+        let _ = self.sender.send(LogLine::Exit);
+        let _ = self.join_handle.join();
+    }
+}
+
+fn file_logger_task(
     file_path: PathBuf,
     receiver: Receiver<LogLine>,
 ) -> Result<(), Box<dyn std::any::Any + Send>> {
@@ -37,10 +62,10 @@ fn console_logger_task(
     {
         Ok(opened_file) => {
             file = opened_file;
-            println!("> [console_logger_task] opened {:?}", file_path);
+            println!("> [file_logger_task] opened {:?}", file_path);
         }
         Err(e) => {
-            println!("> [console_logger_task] error {:?}", e);
+            println!("> [file_logger_task] error {:?}", e);
             return Err(Box::new(e));
         }
     };
@@ -50,7 +75,6 @@ fn console_logger_task(
         let mut sync = false;
         loop {
             match receiver.try_recv() {
-                Err(_) => break,
                 Ok(LogLine::Exit) => {
                     sync = true;
                     exit = true;
@@ -71,49 +95,22 @@ fn console_logger_task(
                     );
                     let buf = line.as_bytes();
                     if let Err(e) = file.write_all(buf) {
-                        println!("> [console_logger_task] write error {:#?}", e);
+                        println!("> [file_logger_task] write error {:#?}", e);
                         return Err(Box::new(e));
                     }
                 }
+                _ => break,
             }
+            yield_now();
         }
         if sync {
             if let Err(e) = file.sync_all() {
-                println!("> [console_logger_task] sync error {:#?}", e);
+                println!("> [file_logger_task] sync error {:#?}", e);
                 return Err(Box::new(e));
             }
         }
         if exit {
-            return Ok(println!("> [console_logger_task] end {:?}", file_path));
+            return Ok(println!("> [file_logger_task] end {:?}", file_path));
         }
-    }
-}
-
-impl ConsoleLogger {
-    pub fn sender(&self) -> Sender<LogLine> {
-        self.sender.clone()
-    }
-    pub fn exit(&self) {
-        let _ = self.sender.send(LogLine::Exit);
-    }
-    pub fn join(self) -> Result<(), Box<dyn std::any::Any + Send>> {
-        self.join_handle.join()?
-    }
-    pub fn new(project_name: String) -> Result<ConsoleLogger, Box<dyn std::error::Error>> {
-        let path = Path::new(&project_name);
-        let _ = create_dir(path);
-
-        let fmt = "%y%m%d_%H%M%S";
-        let now = Utc::now();
-        let file_name = format!("{}_{}.log", project_name, now.format(fmt));
-        let file_path = path.join(Path::new(&file_name));
-
-        let (sender, receiver) = channel();
-        let task = move || console_logger_task(file_path, receiver);
-        let join_handle = thread::spawn(task);
-        Ok(ConsoleLogger {
-            join_handle,
-            sender,
-        })
     }
 }

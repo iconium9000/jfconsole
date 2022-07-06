@@ -1,7 +1,4 @@
-use std::{
-    error::Error,
-    str::FromStr,
-};
+use std::{error::Error, str::FromStr};
 
 use rustyline::Editor;
 
@@ -45,7 +42,10 @@ where
     Ok(T),
     EmptyEntry,
     IOErr(std::io::Error),
-    ParseErr(<T as FromStr>::Err, String),
+    ParseErr {
+        e: <T as FromStr>::Err,
+        user_entry: String,
+    },
     ReadErr(rustyline::error::ReadlineError),
 }
 
@@ -61,7 +61,7 @@ where
             } else {
                 match user_entry.parse::<T>() {
                     Ok(e) => ReadAndParseUserEntryRes::Ok(e),
-                    Err(e) => ReadAndParseUserEntryRes::ParseErr(e, user_entry),
+                    Err(e) => ReadAndParseUserEntryRes::ParseErr { e, user_entry },
                 }
             }
         }
