@@ -1,4 +1,7 @@
-use crate::{byte_process_thread::DATE_TIME_FMT, main_thread::{FILE_LOGGER_THREAD_PRIORITY, set_thread_priority}};
+use crate::{
+    byte_process_thread::DATE_TIME_FMT,
+    main_thread::{set_thread_priority, FILE_LOGGER_THREAD_PRIORITY},
+};
 use chrono::{DateTime, Utc};
 use std::{
     fs::{create_dir, OpenOptions},

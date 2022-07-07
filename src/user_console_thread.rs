@@ -1,4 +1,8 @@
-use crate::{byte_process_thread::Msg, main_thread::{ProcessorInfo, set_thread_priority, USER_CONSOLE_THREAD_PRIORITY}, serial_port_thread::WriteBuf};
+use crate::{
+    byte_process_thread::Msg,
+    main_thread::{set_thread_priority, ProcessorInfo, USER_CONSOLE_THREAD_PRIORITY},
+    serial_port_thread::WriteBuf,
+};
 use chrono::Utc;
 use rustyline::{error::ReadlineError, Editor};
 use std::{

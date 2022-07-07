@@ -33,3 +33,12 @@ gps
 ls 2:/2022 -r
 ls 0: -r
 ls 2:/2022 -r
+help
+ls 2:/2022
+ls 2:/2022 -r
+http_put http://jk.iconium9000.com:4000/log 2:/2022/06/16/charger/C20220616235953_65535.json
+http_put http://jk.iconium9000.com:3500/log 2:/2022/06/16/charger/C20220616235953_65535.json
+ls 2:/2022 -r
+http_put http://jk.iconium9000.com:3500/log 2:/2022/06/17/charger/C20220617234808_65535.json
+ls 2:/2022 -r
+http_put http://jk.iconium9000.com:3500/log 2:/2022/06/17/charger/C20220617234808_65535.json
