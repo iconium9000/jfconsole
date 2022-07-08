@@ -1,19 +1,20 @@
 use serde::{Deserialize, Serialize};
 use std::{
+    any::Any,
     fs::{self, DirEntry, File},
     io::BufReader,
     path::PathBuf,
 };
 
 use crate::{
-    main_thread::{BuadRate, Config, ProcessorInfo},
+    main_thread::{BoxErr, BuadRate, Config, ProcessorInfo},
     user_io::{read_and_parse_user_entry, RaisedError, ReadAndParseUserEntryRes},
 };
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ConfigDto {
     project_name: String,
-    processors: Vec<ProcessorInfoDto>,
+    processors: Box<[ProcessorInfoDto]>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -48,11 +49,11 @@ impl Config {
     pub fn from_dto(
         project_path: PathBuf,
         cfg: ConfigDto,
-        procs: &Vec<ProcessorInfo>,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
+        procs: &[ProcessorInfo],
+    ) -> Result<Self, Box<dyn Any + Send>> {
         let mut processors = vec![];
         let cfg_processors_len = cfg.processors.len();
-        for p_dto in cfg.processors {
+        for p_dto in cfg.processors.into_vec() {
             for p_rc in procs {
                 if p_rc.port_name.eq(&p_dto.port_name) {
                     processors.push(p_rc.duplicate_from_dto(p_dto));
@@ -63,7 +64,7 @@ impl Config {
 
         if processors.len() == cfg_processors_len {
             Ok(Self {
-                processors,
+                processors: processors.into(),
                 project_name: cfg.project_name,
                 project_path,
             })
@@ -74,31 +75,31 @@ impl Config {
 }
 
 impl Config {
-    pub fn save_config_file(self) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn save_config_file(self) -> Result<Self, Box<dyn Any + Send>> {
         let ref value = ConfigDto {
             project_name: self.project_name.clone(),
             processors: self.processors.iter().map(|p| p.to_dto()).collect(),
         };
 
-        let contents = serde_json::to_string_pretty(value)?;
-        fs::write(self.project_path.clone(), contents)?;
+        let contents = serde_json::to_string_pretty(value).box_err()?;
+        fs::write(self.project_path.clone(), contents).box_err()?;
         Ok(self)
     }
 }
 
 impl Config {
     pub fn read_config_file(
-        dir_entry_res: Result<DirEntry, std::io::Error>,
-        procs: &Vec<ProcessorInfo>,
-    ) -> Result<Config, Box<dyn std::error::Error>> {
+        dir_entry_res: Result<DirEntry, Box<dyn Any + Send>>,
+        procs: &[ProcessorInfo],
+    ) -> Result<Config, Box<dyn Any + Send>> {
         let dir_entry = dir_entry_res?;
-        if dir_entry.file_type()?.is_dir() {
+        if dir_entry.file_type().box_err()?.is_dir() {
             return Err(RaisedError::new("path to dir"));
         }
         let project_path = dir_entry.path();
         match project_path.extension() {
             Some(ext) if ext == "json" => {
-                let file = File::open(&project_path)?;
+                let file = File::open(&project_path).box_err()?;
                 let reader = BufReader::new(file);
                 match serde_json::from_reader(reader) {
                     Ok(cfg) => Config::from_dto(project_path, cfg, procs),
@@ -116,17 +117,18 @@ pub enum UserSelectFileRes {
     NoConfigs,
     SelectCustom,
     InvalidEntry,
-    Err(Box<dyn std::error::Error>),
+    Err(Box<dyn Any + Send>),
 }
 
 impl Config {
-    pub fn user_select_file(procs: &Vec<ProcessorInfo>) -> UserSelectFileRes {
+    pub fn user_select_file(procs: &[ProcessorInfo]) -> UserSelectFileRes {
         let mut cfgs = vec![];
         match fs::read_dir("./") {
             Ok(paths) => {
                 for path_res in paths {
-                    if let Ok(cfg) = Self::read_config_file(path_res, &procs) {
-                        cfgs.push(cfg);
+                    match Self::read_config_file(path_res.box_err(), &procs) {
+                        Ok(cfg) => cfgs.push(cfg),
+                        _ => {}
                     }
                 }
             }

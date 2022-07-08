@@ -1,9 +1,9 @@
 use crate::{
-    main_thread::{Config, ProcessorInfo},
+    main_thread::{BoxErr, Config, ProcessorInfo},
     user_io::{read_and_parse_user_entry, ReadAndParseUserEntryRes},
 };
 use rustyline::{error::ReadlineError, Editor};
-use std::{num::ParseIntError, path::PathBuf};
+use std::{any::Any, num::ParseIntError, path::PathBuf};
 
 pub enum UserSelectConfigRes {
     Proc(ProcessorInfo),
@@ -19,13 +19,12 @@ pub enum UserSelectConfigRes {
 }
 
 impl ProcessorInfo {
-    pub fn user_config(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn user_config(&mut self) -> Result<(), Box<dyn Any + Send>> {
         println!("> Selected {}\n", self.port_name);
 
         let mut editor = Editor::<()>::new();
         let prompt = "Enter nickname for processor: ";
-        let op = |e| Err(Box::new(e));
-        self.processor_name = editor.readline(prompt).or_else(op)?;
+        self.processor_name = editor.readline(prompt).box_err()?;
         println!(
             "> Nicknamed {} as {}\n",
             self.port_name, self.processor_name
@@ -87,9 +86,7 @@ impl ProcessorInfo {
 }
 
 impl Config {
-    pub fn user_create_custom(
-        mut procs: Vec<ProcessorInfo>,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn user_create_custom(mut procs: Vec<ProcessorInfo>) -> Result<Self, Box<dyn Any + Send>> {
         let mut editor = Editor::<()>::new();
         let mut selected = vec![];
         loop {
@@ -121,13 +118,12 @@ impl Config {
         }
 
         let prompt = "enter project name: ";
-        let op = |e| Err(Box::new(e));
-        let project_name = editor.readline(prompt).or_else(op)?;
+        let project_name = editor.readline(prompt).box_err()?;
         println!("> Set project name as {}", project_name);
 
         let project_path = PathBuf::from(format!("./{}.json", project_name));
         Self {
-            processors: selected,
+            processors: selected.into(),
             project_name,
             project_path,
         }

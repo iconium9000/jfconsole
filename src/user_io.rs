@@ -1,4 +1,4 @@
-use std::{error::Error, str::FromStr};
+use std::{error::Error, str::FromStr, any::Any};
 
 use rustyline::Editor;
 
@@ -8,7 +8,7 @@ pub struct RaisedError {
 }
 
 impl RaisedError {
-    pub fn new(msg: &str) -> Box<dyn std::error::Error> {
+    pub fn new(msg: &str) -> Box<dyn Any + Send> {
         Box::new(Self {
             msg: String::from(msg),
         })

@@ -1,24 +1,34 @@
 use crate::{
-    byte_process_thread::{ByteProcessThread, ProcessorByteCache},
-    file_logger_thread::FileLoggerThread,
     read_config::UserSelectFileRes,
-    serial_port_thread::SerialConsoleThread,
-    user_console_thread::{user_console_task, ProcesserUserConsoleWriter},
+    serial_console_thread::SerialConsoleThread,
+    user_console_thread::{user_console_task, ProcFmt, ProcesserUserConsoleWriter},
 };
+use chrono::Utc;
 use serialport::{available_ports, SerialPortType, UsbPortInfo};
-use std::{
-    path::{Path, PathBuf},
-    sync::mpsc::channel,
-};
+use std::{any::Any, path::PathBuf};
 use thread_priority::ThreadPriority;
 
 pub type BuadRate = u32;
 pub const DEFAULT_BAUDRATE: BuadRate = 115_200;
+pub const DATE_TIME_FMT: &'static str = "%y-%m-%d %H:%M:%S%.3f";
 
 pub const BYTE_PROCESS_THREAD_PRIORITY: u8 = 0;
 pub const SERIAL_PORT_THREAD_PRIORITY: u8 = 1;
 pub const USER_CONSOLE_THREAD_PRIORITY: u8 = 2;
 pub const FILE_LOGGER_THREAD_PRIORITY: u8 = 3;
+
+pub trait BoxErr<T> {
+    fn box_err(self) -> Result<T, Box<dyn Any + Send>>;
+}
+
+impl<T, E: Any + Send> BoxErr<T> for Result<T, E> {
+    fn box_err(self) -> Result<T, Box<dyn Any + Send>> {
+        match self {
+            Ok(ok) => Ok(ok),
+            Err(e) => Err(Box::new(e)),
+        }
+    }
+}
 
 pub fn set_thread_priority<const PRIORITY: u8>() {
     ThreadPriority::Crossplatform(PRIORITY.try_into().unwrap())
@@ -56,15 +66,17 @@ impl ProcessorInfo {
 }
 
 pub struct Config {
-    pub processors: Vec<ProcessorInfo>,
+    pub processors: Box<[ProcessorInfo]>,
     pub project_name: String,
     pub project_path: PathBuf,
 }
 
 impl ProcessorInfo {
-    pub fn available_processors() -> Result<Vec<ProcessorInfo>, std::io::Error> {
+    pub fn available_processors() -> Result<Vec<ProcessorInfo>, Box<dyn Any + Send>> {
+        let ports = available_ports().box_err()?;
+
         let mut procs = vec![];
-        for serial_port_info in available_ports()? {
+        for serial_port_info in ports {
             if let SerialPortType::UsbPort(usb_port_info) = serial_port_info.port_type {
                 procs.push(ProcessorInfo::new(
                     serial_port_info.port_name,
@@ -76,7 +88,7 @@ impl ProcessorInfo {
     }
 }
 
-pub fn main_task() -> Result<(), Box<dyn std::error::Error>> {
+pub fn main_task() -> Result<(), Box<dyn Any + Send>> {
     println!("Welcome!\n\n");
 
     let procs = ProcessorInfo::available_processors()?;
@@ -98,46 +110,24 @@ pub fn main_task() -> Result<(), Box<dyn std::error::Error>> {
             cfg.project_path
         ));
     }
-
-    let mut serial_console_threads = vec![];
     let mut writers = vec![];
-    let mut processor_byte_caches = vec![];
+    let mut serial_console_threads = vec![];
+    for processor_info in cfg.processors.into_vec() {
+        let start_date_time = Utc::now();
+        let nick = processor_info.processor_name.clone();
+        let proc_fmt = ProcFmt::new(nick, start_date_time);
+        let serial_console_thread = SerialConsoleThread::spawn(proc_fmt.clone(), &processor_info)?;
+        let writer = ProcesserUserConsoleWriter::new(proc_fmt.clone());
 
-    let logger_thread = FileLoggerThread::spawn(&cfg.project_name)?;
-
-    let (msg_sender, msg_receiver) = channel();
-    let mut processor_idx = 0;
-    for processor_info in cfg.processors {
-        let serial_console_thread =
-            SerialConsoleThread::spawn(&processor_info, processor_idx, &msg_sender)?;
-        writers.push(ProcesserUserConsoleWriter::new(
-            Path::new(&cfg.project_name),
-            &processor_info,
-            serial_console_thread.write_sender(),
-        ));
-        processor_byte_caches.push(ProcessorByteCache::new(
-            &processor_info,
-            logger_thread.logline_sender(),
-        ));
         serial_console_threads.push(serial_console_thread);
-        processor_idx += 1;
+        writers.push(writer);
     }
 
-    let byte_process_thread =
-        ByteProcessThread::spawn(&msg_sender, msg_receiver, processor_byte_caches);
-
-    user_console_task(&mut writers, &msg_sender);
-
-    for writer in writers {
-        writer.save_history();
-    }
+    user_console_task(&mut writers);
 
     for serial_console_thread in serial_console_threads {
         serial_console_thread.join();
     }
-
-    byte_process_thread.join();
-    logger_thread.join();
 
     Ok(println!("> [main_task] end"))
 }

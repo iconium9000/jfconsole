@@ -1,99 +1,90 @@
-use crate::{
-    byte_process_thread::Msg,
-    main_thread::{set_thread_priority, ProcessorInfo, USER_CONSOLE_THREAD_PRIORITY},
-    serial_port_thread::WriteBuf,
-};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use rustyline::{error::ReadlineError, Editor};
-use std::{
-    path::{Path, PathBuf},
-    sync::mpsc::Sender,
-};
+
+use crate::main_thread::{set_thread_priority, DATE_TIME_FMT, USER_CONSOLE_THREAD_PRIORITY};
+
+#[derive(Clone)]
+pub struct ProcFmt {
+    nick: String,
+    timestamp: String,
+}
+
+impl ProcFmt {
+    pub fn new(nick: String, start_date_time: DateTime<Utc>) -> Self {
+        let timestamp = Self::timestamp(start_date_time);
+        Self { nick, timestamp }
+    }
+    pub fn nick(&self) -> &str {
+        &self.nick
+    }
+    fn timestamp(date_time: DateTime<Utc>) -> String {
+        date_time.format(DATE_TIME_FMT).to_string()
+    }
+    pub fn set_time(&mut self, date_time: DateTime<Utc>) {
+        self.timestamp = Self::timestamp(date_time)
+    }
+    pub fn fmt_write_line(&self, line: &str) -> String {
+        format!("{} w {} {}", self.nick, self.timestamp, line)
+    }
+    pub fn fmt_read_line(&self, line: &str) -> String {
+        format!("{} r {} {}", self.nick, self.timestamp, line)
+    }
+}
 
 pub struct ProcesserUserConsoleWriter {
+    proc_fmt: ProcFmt,
     editor: Editor<()>,
-    history_path: PathBuf,
-    processor_name: String,
-    write_sender: Sender<WriteBuf>,
+}
+
+pub enum ReadLineRes {
+    Line(String),
+    NextProcessor,
+    Exit,
 }
 
 impl ProcesserUserConsoleWriter {
-    pub fn new(
-        project_path: &Path,
-        processor_info: &ProcessorInfo,
-        write_sender: Sender<WriteBuf>,
-    ) -> Self {
-        let history_filename = format!("{} cmd history.txt", processor_info.processor_name);
-        let mut writer = ProcesserUserConsoleWriter {
-            history_path: project_path.join(Path::new(&history_filename)),
-            editor: Editor::new(),
-            write_sender,
-            processor_name: processor_info.processor_name.clone(),
-        };
-        if writer.editor.load_history(&writer.history_path).is_err() {
-            println!(
-                "> [user_console_task] no previous {} cmd history at {:?}",
-                writer.processor_name, writer.history_path,
-            );
-        } else {
-            println!(
-                "> [user_console_task] recovered {} cmd history from {:?}",
-                writer.processor_name, writer.history_path,
-            );
-        }
-        writer
+    pub fn new(proc_fmt: ProcFmt) -> Self {
+        let editor = Editor::new();
+        Self { proc_fmt, editor }
     }
-}
-
-impl ProcesserUserConsoleWriter {
-    pub fn save_history(mut self) {
-        if let Err(e) = self.editor.save_history(&self.history_path) {
-            println!(
-                "> [user_console_task] saving {} cmd history failed with {:?}",
-                self.processor_name, e
-            );
-        } else {
-            println!(
-                "> [user_console_task] saved {} cmd history to {:?}",
-                self.processor_name, self.history_path
-            )
-        }
-    }
-}
-
-pub fn user_console_task(writers: &mut Vec<ProcesserUserConsoleWriter>, msg_sender: &Sender<Msg>) {
-    set_thread_priority::<USER_CONSOLE_THREAD_PRIORITY>();
-
-    let mut processor_idx = 0;
-    loop {
-        let ref mut writer = writers[processor_idx];
-        match writer.editor.readline("") {
-            Ok(mut line) => {
-                writer.editor.add_history_entry(line.as_str());
-                line.push_str("\r");
-                let _ = writer
-                    .write_sender
-                    .send(WriteBuf::Buf(line.as_bytes().into()));
-                let _ = msg_sender.send(Msg::Write {
-                    bytes: line.as_bytes().into(),
-                    instant: Utc::now(),
-                    processor_idx,
-                });
-            }
-            Err(ReadlineError::Interrupted) => {
-                break;
-            }
-            Err(ReadlineError::Eof) => {
-                processor_idx += 1;
-                processor_idx %= writers.len();
-                let ref w = writers[processor_idx];
-                println!("> [user_console_task] switching to {:?}", w.processor_name);
-            }
+    pub fn readline(&mut self) -> ReadLineRes {
+        match self.editor.readline("") {
+            Ok(line) => ReadLineRes::Line(line),
+            Err(ReadlineError::Interrupted) => ReadLineRes::Exit,
+            Err(ReadlineError::Eof) => ReadLineRes::NextProcessor,
             Err(err) => {
                 println!("> [user_console_task] error: {:#?}", err);
-                break;
+                ReadLineRes::Exit
             }
         }
     }
-    println!("> [user_console_task] end");
+}
+
+pub fn user_console_task(writers: &mut [ProcesserUserConsoleWriter]) {
+    set_thread_priority::<USER_CONSOLE_THREAD_PRIORITY>();
+
+    let n_writers = writers.len();
+    let mut processor_idx = 0;
+    let mut writer = &mut writers[processor_idx];
+    loop {
+        match writer.readline() {
+            ReadLineRes::Line(line) => {
+                writer.proc_fmt.set_time(Utc::now());
+                let fmt = writer.proc_fmt.fmt_write_line(&line);
+                println!("{}", fmt);
+            }
+            ReadLineRes::NextProcessor => {
+                processor_idx += 1;
+                processor_idx %= n_writers;
+                writer = &mut writers[processor_idx];
+                println!(
+                    "> [user_console_task] switching to {:?}",
+                    writer.proc_fmt.nick()
+                );
+                continue;
+            }
+            ReadLineRes::Exit => break,
+        }
+    }
+    println!("> [user_console_task] end")
 }
