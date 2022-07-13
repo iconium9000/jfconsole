@@ -1,6 +1,21 @@
-use std::{error::Error, str::FromStr};
-
 use rustyline::Editor;
+use std::{any::Any, error::Error, str::FromStr};
+
+pub type BoxError = Box<dyn Any + Send>;
+pub type BoxResult<T> = Result<T, BoxError>;
+
+pub trait BoxErr<T> {
+    fn box_err(self) -> BoxResult<T>;
+}
+
+impl<T, E: Any + Send> BoxErr<T> for Result<T, E> {
+    fn box_err(self) -> BoxResult<T> {
+        match self {
+            Ok(ok) => Ok(ok),
+            Err(e) => Err(Box::new(e)),
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct RaisedError {
@@ -8,7 +23,7 @@ pub struct RaisedError {
 }
 
 impl RaisedError {
-    pub fn new(msg: &str) -> Box<dyn std::error::Error> {
+    pub fn new(msg: &str) -> BoxError {
         Box::new(Self {
             msg: String::from(msg),
         })
