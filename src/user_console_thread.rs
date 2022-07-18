@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use rustyline::{error::ReadlineError, Editor};
 
 use crate::{
-    buf_iter::RingBufQProducer,
+    ring_buf_queue::RingBufQProducer,
     line_printer::LinePrinter,
     main_thread::{set_thread_priority, ProcessorInfo, USER_CONSOLE_THREAD_PRIORITY},
     sync_flag::SyncFlagVictim,

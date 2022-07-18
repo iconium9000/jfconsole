@@ -7,7 +7,6 @@
 use jfconsole::main_thread::main_task;
 
 pub fn main() {
-
     match main_task() {
         Err(e) => println!("> [main] error {:#?}", e),
         Ok(_) => println!("> [main] end"),

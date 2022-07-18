@@ -1,8 +1,7 @@
+use ringbuf::{Consumer, Producer, RingBuffer};
 use std::{borrow::Cow, collections::VecDeque};
 
-use ringbuf::{Consumer, Producer, RingBuffer};
-
-pub fn ring_buf_queue<const BUF_SIZE: usize, T>(
+pub fn new_ring_buf_q<const BUF_SIZE: usize, T>(
 ) -> (RingBufQProducer<T>, RingBufQConsumer<BUF_SIZE, T>)
 where
     T: Default + Copy,

@@ -1,4 +1,4 @@
-pub mod buf_iter;
+pub mod ring_buf_queue;
 pub mod custom_config;
 pub mod main_thread;
 pub mod read_config;

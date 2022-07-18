@@ -1,13 +1,14 @@
 use crate::{
-    buf_iter::RingBufQConsumer,
     line_printer::LinePrinter,
     main_thread::ProcessorInfo,
-    user_io::{BoxErr, BoxResult}, sync_flag::{SyncFlagAssassin, new_sync_flag, SyncFlagVictim},
+    ring_buf_queue::RingBufQConsumer,
+    sync_flag::{new_sync_flag, SyncFlagAssassin, SyncFlagVictim},
+    user_io::{BoxErr, BoxResult},
 };
 use serialport::SerialPort;
 use std::{
     thread,
-    thread::JoinHandle,
+    thread::{yield_now, JoinHandle},
 };
 
 pub struct SerialConsoleThread<const SIZE: usize> {
@@ -62,6 +63,8 @@ fn serial_console_task<const SIZE: usize>(
         if let Ok(count) = serial_port.read(read_buf) {
             line_printer.push_bytes(&read_buf[..count]);
         }
+    
+        yield_now();
     }
 
     Ok(())

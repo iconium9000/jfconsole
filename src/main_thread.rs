@@ -1,5 +1,5 @@
 use crate::{
-    buf_iter::ring_buf_queue,
+    ring_buf_queue::new_ring_buf_q,
     file_logger_thread::FileLoggerThread,
     line_printer::LinePrinter,
     read_config::UserSelectFileRes,
@@ -84,15 +84,15 @@ impl ProcessorInfo {
 pub fn main_task() -> BoxResult<()> {
     println!("Welcome!\n\n");
 
-    let procs = ProcessorInfo::available_processors()?;
-    if procs.is_empty() {
+    let proc_v = ProcessorInfo::available_processors()?;
+    if proc_v.is_empty() {
         return Ok(println!("> [main_task] No com ports found"));
     }
     let cfg = loop {
-        match Config::user_select_file(&procs) {
+        match Config::user_select_file(&proc_v) {
             UserSelectFileRes::Select(cfg) => break cfg,
-            UserSelectFileRes::NoConfigs => break Config::user_create_custom(procs)?,
-            UserSelectFileRes::SelectCustom => break Config::user_create_custom(procs)?,
+            UserSelectFileRes::NoConfigs => break Config::user_create_custom(proc_v)?,
+            UserSelectFileRes::SelectCustom => break Config::user_create_custom(proc_v)?,
             UserSelectFileRes::InvalidEntry => continue,
             UserSelectFileRes::Err(e) => return Err(e),
         }
@@ -112,7 +112,7 @@ pub fn main_task() -> BoxResult<()> {
     let mut writer_v = vec![];
     let mut serial_console_thread_v = vec![];
     for processor_info in cfg.processors.into_vec() {
-        let (write_producer, write_consumer) = ring_buf_queue();
+        let (write_producer, write_consumer) = new_ring_buf_q();
         serial_console_thread_v.push(SerialConsoleThread::<BUFFER_SIZE>::spawn(
             LinePrinter::new(
                 format!("{} r", processor_info.processor_name),
