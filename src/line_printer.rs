@@ -4,7 +4,8 @@ use crate::main_thread::DATE_TIME_FMT;
 use chrono::Utc;
 
 pub struct LinePrinter {
-    timestamp: String,
+    console_timestamp: String,
+    log_timestamp: String,
     buffer: String,
     prefix: String,
     complete: char,
@@ -13,36 +14,45 @@ pub struct LinePrinter {
     line_sender: Sender<String>,
 }
 
-fn timestamp_now() -> String {
-    Utc::now().format(DATE_TIME_FMT).to_string()
+impl LinePrinter {
+    fn timestamp_now(&mut self) {
+        let now = Utc::now();
+        self.log_timestamp = now.format(DATE_TIME_FMT).to_string();
+        self.console_timestamp = now.format("%M:%S%.3f").to_string();
+    }
 }
 
 macro_rules! send_split {
     ($self: ident, $buffer: expr) => {
-        let fmt = format!(
+        $self.timestamp_now();
+        println!(
             "{} {} {} {}",
-            $self.prefix, $self.timestamp, $self.complete, $buffer
+            $self.prefix, $self.console_timestamp, $self.complete, $buffer
         );
-        println!("{}", fmt);
-        let _ = $self.line_sender.send(fmt);
+        let _ = $self.line_sender.send(format!(
+            "{} {} {} {}",
+            $self.prefix, $self.log_timestamp, $self.complete, $buffer
+        ));
     };
 }
 
 impl LinePrinter {
     pub fn new(prefix: String, line_width: usize, line_sender: Sender<String>) -> Self {
-        Self {
+        let mut line_printer = Self {
             prefix,
-            timestamp: timestamp_now(),
+            log_timestamp: String::new(),
+            console_timestamp: String::new(),
             buffer: String::new(),
-            complete: '>',
+            complete: '|',
             line_width,
             last_char: None,
             line_sender,
-        }
+        };
+        line_printer.timestamp_now();
+        line_printer
     }
 
     pub fn push_str(&mut self, lines: &str) {
-        let mut old_timestamp = true;
         for ch in lines.chars() {
             if let '\r' | '\n' = ch {
                 let last_char = self.last_char;
@@ -73,10 +83,6 @@ impl LinePrinter {
                         }
                         _ => (),
                     }
-                }
-                if self.buffer.is_empty() && old_timestamp {
-                    old_timestamp = false;
-                    self.timestamp = timestamp_now();
                 }
                 self.buffer.push(ch);
                 self.last_char = None;

@@ -1,0 +1,25 @@
+#V2
+reset both
+c
+reset both
+t dhd 1
+ui action start
+beeper on batt_final
+batt
+beeper on batt_final
+beeper set batt_final
+ui action mode
+ui action start
+ui action stop
+ui action pause
+ui action mode
+ui
+ui action mode
+c
+q
+t ipcwdg
+ls 0:
+ls -a 0:
+ls -r 0:
+reset
+gps

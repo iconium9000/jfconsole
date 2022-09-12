@@ -3,3 +3,5 @@ watchdogtest
 ?
 help
 watchdogtest
+reset
+watchdogtest

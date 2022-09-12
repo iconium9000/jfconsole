@@ -1,0 +1,49 @@
+#V2
+log_egress disable
+watchdogtest
+log_egress disable
+dxs http enable
+dxs ext json
+dxs client_id 1007
+dxs serial_number 0067
+dxs file 2:/dxs.json
+dxs host 10.170.22.97:3500
+dxs client_type XSeries
+dxs auth_user test
+dxs auth_pwd test
+dxs device_id 00067
+dxs file_id 123456
+dxs date_time 202207191048
+dxs init confirmed
+log_egress enable
+log_egress disable
+ls 1: -r
+ls 0: -r
+ls 0:/2021/11/19
+ls 0:/2021/11
+ls 0:/2021/11 -r
+cat 1:/LogTest.log
+hexify 1:/LogTest
+hexify 1:/LogTest.log
+ls 1:
+dbg
+ls 1:
+dbg
+ls 0:
+ls 1:
+dbg
+ls 1:
+cat 1:/LogTest.log
+hexify 1:/LogTest.log
+dbg
+dbg 3
+hexify 1:/LogTest.log
+cat 1:/LogTest.log
+ls 1:/2022 -r
+ls 0:
+ls 0: -r
+ls 1: -r
+ls 1:
+ls 0:
+cat 0:/reportdata.txt
+hexify 0:/reportdata.txt

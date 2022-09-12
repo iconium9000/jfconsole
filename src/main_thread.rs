@@ -1,16 +1,19 @@
 use crate::{
-    ring_buf_queue::new_ring_buf_q,
     file_logger_thread::FileLoggerThread,
     line_printer::LinePrinter,
     read_config::UserSelectFileRes,
+    ring_buf_queue::new_ring_buf_q,
     serial_console_thread::SerialConsoleThread,
     sync_flag::new_sync_flag,
     user_console_thread::{user_console_task, ProcesserUserConsoleWriter},
     user_io::{BoxErr, BoxResult},
 };
 use serialport::{available_ports, SerialPortType, UsbPortInfo};
-use std::{path::{PathBuf, Path}, sync::mpsc::channel};
-use thread_priority::ThreadPriority;
+use std::{
+    path::{Path, PathBuf},
+    sync::mpsc::channel,
+};
+use thread_priority::{set_current_thread_priority, ThreadPriority};
 
 pub type BuadRate = u32;
 pub const DEFAULT_BAUDRATE: BuadRate = 115_200;
@@ -24,9 +27,10 @@ pub const USER_CONSOLE_THREAD_PRIORITY: u8 = 2;
 pub const FILE_LOGGER_THREAD_PRIORITY: u8 = 3;
 
 pub fn set_thread_priority<const PRIORITY: u8>() {
-    ThreadPriority::Crossplatform(PRIORITY.try_into().unwrap())
-        .set_for_current()
-        .unwrap();
+    let priority = ThreadPriority::Crossplatform(PRIORITY.try_into().unwrap());
+    if let Err(e) = set_current_thread_priority(priority) {
+        panic!("set_current_thread_priority => {:#?}", e);
+    }
 }
 
 pub struct ProcessorInfo {
@@ -42,7 +46,7 @@ impl ProcessorInfo {
             port_name,
             usb_port_info,
             baudrate: DEFAULT_BAUDRATE,
-            processor_name: "".to_string(),
+            processor_name: String::new(),
         }
     }
 }
@@ -107,7 +111,8 @@ pub fn main_task() -> BoxResult<()> {
     let (main_thread_victim, main_thread_assassin) = new_sync_flag();
 
     let (line_sender, line_receiver) = channel();
-    let file_logger_thread = FileLoggerThread::spawn(&cfg.project_name, line_receiver, main_thread_assassin)?;
+    let file_logger_thread =
+        FileLoggerThread::spawn(&cfg.project_name, line_receiver, main_thread_assassin)?;
 
     let mut writer_v = vec![];
     let mut serial_console_thread_v = vec![];
@@ -130,7 +135,7 @@ pub fn main_task() -> BoxResult<()> {
                 LINE_WIDTH,
                 line_sender.clone(),
             ),
-            write_producer
+            write_producer,
         ));
     }
     user_console_task(main_thread_victim, &mut writer_v);

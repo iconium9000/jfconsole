@@ -1,0 +1,101 @@
+#V2
+log_egress disable
+log_egress enable
+ls 2:/2022 -r
+watchdogtest
+log_egress disable
+dxs http enable
+dxs client_id 1007
+dxs serial_number 0067
+dxs file 2:/dxs.json
+dxs host 192.168.1.186:3500
+dxs client_type XSeries
+dxs auth_user test
+dxs auth_pwd test
+dxs device_id 00067
+dxs file_id 123456
+dxs date_time 202207191048
+dxs init confirmed
+log_egress enable
+dxs status
+log_egress enable
+dxs status
+log_egress disable
+dxs http enable
+dxs client_id 1007
+dxs serial_number 0067
+dxs file 2:/dxs.json
+dxs host 192.168.1.186:3500
+dxs client_type XSeries
+dxs auth_user test
+dxs auth_pwd test
+dxs device_id 00067
+dxs file_id 123456
+dxs date_time 202207191048
+dxs init confirmed
+log_egress enable
+dxs init disable
+log_egress disable
+ls 2:/2022 -r
+f7 r 22-07-20 17:01:18.159 | FIL 2:/2022/07/14/battery/B20220714175244_00067.json 554md5 2:/2022/07/14/battery/B20220714175244_00067.json
+log_egress disable
+md5 2:/2022/07/14/battery/B20220714175244_00067.json
+log_egress disable
+md5 2:/2022/07/14/battery/B20220714175244_00067.json
+log_egress disable
+md5 2:/2022/07/14/battery/B20220714175244_00067.json
+log_egress disable
+dxs http enable
+dxs client_id 1007
+dxs serial_number 0067
+dxs file 2:/dxs.json
+dxs host jk.iconium9000.com:4000
+dxs client_type XSeries
+dxs auth_user test
+dxs auth_pwd test
+dxs device_id 00067
+dxs file_id 123456
+dxs date_time 202207191048
+dxs init confirmed
+ls 2:/2022 -r
+dxs post 2:/2022/07/14/battery/B20220714164840_00067.json
+log_egress disable
+dxs http enable
+dxs client_id 1007
+dxs serial_number 0067
+dxs file 2:/dxs.json
+dxs host 192.168.1.186:3500
+dxs client_type XSeries
+dxs auth_user test
+dxs auth_pwd test
+dxs device_id 00067
+dxs file_id 123456
+dxs date_time 202207191048
+dxs init confirmed
+dxs post 2:/2022/07/14/battery/B20220714164840_00067.json
+log_egress disable
+dxs http enable
+dxs client_id 1007
+dxs serial_number 0067
+dxs file 2:/dxs.json
+dxs host jk.iconium9000.com:4000
+dxs client_type XSeries
+dxs auth_user test
+dxs auth_pwd test
+dxs device_id 00067
+dxs file_id 123456
+dxs date_time 202207191048
+dxs init confirmed
+dxs post 2:/2022/07/14/battery/B20220714164840_00067.json
+log_egress disable
+?
+ls 2:/
+tg2 2:/testfile.tg2
+log_egress disable
+tg2 2:/testfile.tg2
+cat 1:/2022/09/02/battery/B20220902161139_00082.json
+hexify 1:/2022/09/02/battery/B20220902161139_00082.json
+ls 2:/2022 -r
+hexify 2:/2022/07/14/battery/B20220714180430_00067.json
+cat 2:/2022/07/14/battery/B20220714180430_00067.json
+hexify 2:/2022/07/14/battery/B20220714180430_00067.json

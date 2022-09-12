@@ -1,101 +1,101 @@
 #V2
-gps
-ls 2:/2022 -r
-ls 0: -r
-ls 2:/2022 -r
-help
-ls 2:/2022
-ls 2:/2022 -r
-http_put http://jk.iconium9000.com:4000/log 2:/2022/06/16/charger/C20220616235953_65535.json
-http_put http://jk.iconium9000.com:3500/log 2:/2022/06/16/charger/C20220616235953_65535.json
-ls 2:/2022 -r
-http_put http://jk.iconium9000.com:3500/log 2:/2022/06/17/charger/C20220617234808_65535.json
-ls 2:/2022 -r
-http_put http://jk.iconium9000.com:3500/log 2:/2022/06/17/charger/C20220617234808_65535.json
-watchdogtest
-logegg disable
-logegg 
-logegg disable
-logegg enable
-logegg disable
-logegg enable
-logegg disable
-logegg toggle-enable
-dxs http enabled
-dxs client_id 34543
-dxs serial_number 1007
-dxs dxs_file 2:/dxs.json
-dxs host jk.iconium9000.com:3500
-dxs client_type XSeries
-dxs auth_user test
-dxs auth_pwd test
+dxs md5_checksum o9ZeYleoEVSPQW9gjiYb2g==
+dxs save_config_file 2:/dxs_config.bin
+tg2 2:/testfile.tg2
+dxs post 2:/testfile.tg2
+dxs clear
+dxs http disable
+dxs template_file_path 2:/dxs.json
+dxs host dxsvc.int.zollonline.us:443
+dxs client_type Thermogard2
+dxs auth_user ba2ea201-3fc7-ec11-aa97-02d82cfcb410
+dxs auth_pwd 54321
+dxs file_id 123456
 dxs device_id 00067
-dxs file_id TODO: UUID
-dxs date_time 20220713030136
-dxs correctly_initialized confirmed
-dxs http enabled
-        // dxs correctly_initialized confirmed
-dxs http enabled
-dxs client_id 34543
-dxs serial_number 1007
-dxs dxs_file 2:/dxs.json
-dxs host jk.iconium9000.com:3500
-dxs client_type XSeries
-dxs auth_user test
-dxs auth_pwd test
+dxs md5_checksum o9ZeYleoEVSPQW9gjiYb2g==
+dxs save_config_file 2:/dxs_config.bin
+reset
+hexify 2:/dxs_config.bin
+dxs clear
+dxs http disable
+dxs template_file_path 2:/dxs.json
+dxs host dxsvc.int.zollonline.us:443
+dxs client_type Thermogard2
+dxs auth_user ba2ea201-3fc7-ec11-aa97-02d82cfcb410
+dxs auth_pwd 54321
+dxs file_id 123456
 dxs device_id 00067
-dxs file_id TODO: UUID
-dxs date_time 20220713030136
-dxs correctly_initialized confirmed
-dxs client_id 34543
-dxs serial_number 1007dxs dxs_file 2:/dxs.json
-dxs host jk.iconium9000.com:3500
-dxs client_type XSeries
-dxs auth_user test
-dxs auth_pwd test
+dxs md5_checksum o9ZeYleoEVSPQW9gjiYb2g==
+dxs save_config_file 2:/dxs_config.bin
+dxs md5_checksum c4+jHR89OcKA6vye7S59tA==
+dxs post 2:/testfile.tg2
+reset
+dxs post 2:/testfile.tg2
+reset
+dxs post 2:/testfile.tg2
+dxs clear
+dxs http disable
+dxs template_file_path 2:/dxs.json
+dxs host dxsvc.int.zollonline.us:443
+dxs client_type Thermogard2
+dxs auth_user ba2ea201-3fc7-ec11-aa97-02d82cfcb410
+dxs auth_pwd 54321
+dxs file_id 123456
 dxs device_id 00067
-dxs file_id TODO: UUID
-dxs date_time 20220713030136
-dxs correctly_initialized confirmed
-logegg disable
-dxs http enabled
-logegg disable
-dxs http enabled
-dxs client_id 34543
-dxs serial_number 1007
-dxs dxs_file 2:/dxs.json
-dxs host jk.iconium9000.com:3500
-dxs client_type XSeries
-dxs auth_user test
-dxs auth_pwd test
+dxs md5_checksum o9ZeYleoEVSPQW9gjiYb2g==
+dxs save_config_file 2:/dxs_config.bin
+tg2 2:/testfile.tg2
+dxs post 2:/testfile.tg2
+dxs clear
+dxs http disable
+dxs template_file_path 2:/dxs.json
+dxs host dxsvc.int.zollonline.us:443
+dxs client_type Thermogard2
+dxs auth_user ba2ea201-3fc7-ec11-aa97-02d82cfcb410
+dxs auth_pwd 54321
+dxs file_id 123456
 dxs device_id 00067
-dxs file_id TODO: UUID
-dxs date_time 20220713030136
-dxs correctly_initialized confirmed
-logegg enable
-logegg toggle-enable
-logegg enable
-logegg disable
-dxs http enabled
-logegg disable
-dxs http enabled
-logegg disable
-dxs http enabled
-logegg disable
-dxs http enabled
-dxs client_id 34543
-dxs serial_number 1007
-dxs dxs_file 2:/dxs.json
-dxs host jk.iconium9000.com:3500
-dxs client_type XSeries
-dxs auth_user test
-dxs auth_pwd test
+dxs md5_checksum c4+jHR89OcKA6vye7S59tA==
+dxs save_config_file 2:/dxs_config.bin
+tg2 2:/testfile.tg2
+dxs post 2:/testfile.tg2
+reset
+dxs clear
+dxs http disable
+dxs template_file_path 2:/dxs.json
+dxs host dxsvc.int.zollonline.us:443
+dxs client_type Thermogard2
+dxs auth_user ba2ea201-3fc7-ec11-aa97-02d82cfcb410
+dxs auth_pwd 54321
+dxs file_id 123456
 dxs device_id 00067
-dxs file_id TODO: UUID
-dxs date_time 20220713030136
-dxs correctly_initialized confirmed
-logegg enable
-logegg disable
-watchdogtest
-ls 2:/2022
-ls 2:/2022 -r
+dxs md5_checksum c4+jHR89OcKA6vye7S59tA==
+dxs save_config_file 2:/dxs_config.bin
+tg2 2:/testfile.tg2
+dxs post 2:/testfile.tg2
+reset
+dxs post 2:/testfile.tg2
+reset
+dxs post 2:/testfile.tg2
+reset
+fat_rm 2:/dxs_config.bin
+reset
+dxs clear
+dxs http disable
+dxs template_file_path 2:/dxs.json
+dxs host dxsvc.int.zollonline.us:443
+dxs client_type Thermogard2
+dxs auth_user ba2ea201-3fc7-ec11-aa97-02d82cfcb410
+dxs auth_pwd 54321
+dxs file_id 123456
+dxs device_id 00067
+dxs md5_checksum c4+jHR89OcKA6vye7S59tA==
+dxs save_config_file 2:/dxs_config.bin
+tg2 2:/testfile.tg2
+dxs post 2:/testfile.tg2
+reset
+dxs post 2:/testfile.tg2
+reset
+dxs post 2:/testfile.tg2
+reset
+dxs post 2:/testfile.tg2

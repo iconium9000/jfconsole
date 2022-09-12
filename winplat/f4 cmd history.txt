@@ -1,0 +1,11 @@
+#V2
+s
+x
+s
+x
+t dhd 1
+x
+t ipcwdg
+t ver
+t ipcwdg
+reset
