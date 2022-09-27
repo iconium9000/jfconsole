@@ -9,7 +9,7 @@ use crate::{
     sync_flag::SyncFlagVictim,
 };
 
-pub struct ProcesserUserConsoleWriter {
+pub struct ProcessorUserConsoleWriter {
     processor_name: String,
     history_path: PathBuf,
     editor: Editor<()>,
@@ -23,7 +23,7 @@ pub enum ReadLineRes {
     Exit,
 }
 
-impl ProcesserUserConsoleWriter {
+impl ProcessorUserConsoleWriter {
     pub fn new(
         project_path: &Path,
         processor_info: &ProcessorInfo,
@@ -78,7 +78,7 @@ impl ProcesserUserConsoleWriter {
     }
 }
 
-pub fn user_console_task(victim: SyncFlagVictim, writers: &mut [ProcesserUserConsoleWriter]) {
+pub fn user_console_task(victim: SyncFlagVictim, writers: &mut [ProcessorUserConsoleWriter]) {
     set_thread_priority::<USER_CONSOLE_THREAD_PRIORITY>();
     let mut processor_idx = 0;
     let mut writer = &mut writers[processor_idx];

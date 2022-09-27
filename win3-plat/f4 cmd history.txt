@@ -1,2 +1,32 @@
 #V2
 reset
+t ipcwdg
+s
+u
+pwm 2
+s
+u
+t pwm 2
+s
+u
+t pwm 2
+t ipcwdg
+t pwm 2
+t ipcwdg
+t potsense 260 4092
+s
+u
+t potsense 260 4092
+t ilp 11000
+t ilp 22000
+t potsense 260 4092
+t ipcwdg
+t
+t ipcwdg
+s
+u
+s
+u
+t ipcwdg
+s
+u

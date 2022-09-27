@@ -5,7 +5,7 @@ use crate::{
     ring_buf_queue::new_ring_buf_q,
     serial_console_thread::SerialConsoleThread,
     sync_flag::new_sync_flag,
-    user_console_thread::{user_console_task, ProcesserUserConsoleWriter},
+    user_console_thread::{user_console_task, ProcessorUserConsoleWriter},
     user_io::{BoxErr, BoxResult},
 };
 use serialport::{available_ports, SerialPortType, UsbPortInfo};
@@ -127,7 +127,7 @@ pub fn main_task() -> BoxResult<()> {
             &processor_info,
             write_consumer,
         )?);
-        writer_v.push(ProcesserUserConsoleWriter::new(
+        writer_v.push(ProcessorUserConsoleWriter::new(
             Path::new(&cfg.project_name),
             &processor_info,
             LinePrinter::new(

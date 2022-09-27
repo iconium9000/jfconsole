@@ -56,7 +56,11 @@ fn serial_console_task<const SIZE: usize>(
             if write_buf.is_empty() {
                 break;
             } else {
-                let _ = serial_port.write_all(&write_buf);
+                for b in write_buf.iter() {
+                    let _ = serial_port.write_all(&[*b]);
+                    let dur = core::time::Duration::from_millis(1);
+                    thread::sleep(dur);
+                }
             }
         }
 
