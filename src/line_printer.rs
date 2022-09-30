@@ -1,6 +1,6 @@
 use std::sync::mpsc::Sender;
 
-use crate::main_thread::DATE_TIME_FMT;
+use crate::{main_thread::DATE_TIME_FMT, ring_buf_queue::RingBufQProducer};
 use chrono::Utc;
 
 pub struct LinePrinter {
@@ -12,6 +12,7 @@ pub struct LinePrinter {
     last_char: Option<char>,
     line_width: usize,
     line_sender: Sender<String>,
+    write_producer: Option<RingBufQProducer<u8>>,
 }
 
 impl LinePrinter {
@@ -37,7 +38,12 @@ macro_rules! send_split {
 }
 
 impl LinePrinter {
-    pub fn new(prefix: String, line_width: usize, line_sender: Sender<String>) -> Self {
+    pub fn new(
+        prefix: String,
+        line_width: usize,
+        line_sender: Sender<String>,
+        write_producer: Option<RingBufQProducer<u8>>,
+    ) -> Self {
         let mut line_printer = Self {
             prefix,
             log_timestamp: String::new(),
@@ -47,6 +53,7 @@ impl LinePrinter {
             line_width,
             last_char: None,
             line_sender,
+            write_producer,
         };
         line_printer.timestamp_now();
         line_printer
@@ -86,6 +93,13 @@ impl LinePrinter {
                 }
                 self.buffer.push(ch);
                 self.last_char = None;
+            }
+        }
+
+        let wp: &mut Option<_> = &mut self.write_producer;
+        if let Some(wp) = wp {
+            if lines.contains("IPC Comm Failure!") {
+                wp.push("t ipcwdg\r".as_bytes())
             }
         }
     }

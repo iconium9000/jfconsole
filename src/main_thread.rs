@@ -118,14 +118,23 @@ pub fn main_task() -> BoxResult<()> {
     let mut serial_console_thread_v = vec![];
     for processor_info in cfg.processors.into_vec() {
         let (write_producer, write_consumer) = new_ring_buf_q();
+        let mut write_consumers = vec![write_consumer];
+        
+        let mut line_write_producer = None;
+        if processor_info.processor_name == "f4" {
+            let (write_producer, write_consumer) = new_ring_buf_q();
+            line_write_producer = Some(write_producer);
+            write_consumers.push(write_consumer);
+        }
         serial_console_thread_v.push(SerialConsoleThread::<BUFFER_SIZE>::spawn(
             LinePrinter::new(
                 format!("{} r", processor_info.processor_name),
                 LINE_WIDTH,
                 line_sender.clone(),
+                line_write_producer,
             ),
             &processor_info,
-            write_consumer,
+            write_consumers,
         )?);
         writer_v.push(ProcessorUserConsoleWriter::new(
             Path::new(&cfg.project_name),
@@ -134,6 +143,7 @@ pub fn main_task() -> BoxResult<()> {
                 format!("{} w", processor_info.processor_name),
                 LINE_WIDTH,
                 line_sender.clone(),
+                None,
             ),
             write_producer,
         ));
