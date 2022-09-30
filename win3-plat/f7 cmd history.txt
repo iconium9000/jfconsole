@@ -1,18 +1,4 @@
 #V2
-log_egress enable
-log_egress disable
-ls 1: -r
-ls 0: -r
-ls 0:/2021/11/19
-ls 0:/2021/11
-ls 0:/2021/11 -r
-cat 1:/LogTest.log
-hexify 1:/LogTest
-hexify 1:/LogTest.log
-ls 1:
-dbg
-ls 1:
-dbg
 ls 0:
 ls 1:
 dbg
@@ -99,3 +85,17 @@ ls 1:/2022/09/10 -r
 ls -r 1:/2022/09/22
 cat 1:/active.ap2
 s
+cat 1:/active.ap2
+cat 1:/2023/0/2/P_PN15000-001_SN00006_L2023023.ap2
+cat 1:/active.ap2
+cat 1:/2023/0/3/P_PN15000-001_SN00006_L2023031.ap2
+cat 1:/active.ap2
+cat 1:/2023/0/3/P_PN15000-001_SN00006_L2023036.ap2
+cat 1:/active.ap2
+ls
+ls 0:
+cat 1:/active.ap2
+ls 0:
+cat 1:/active.ap2
+\\
+cat 1:/active.ap2

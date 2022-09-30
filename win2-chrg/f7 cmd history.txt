@@ -6,3 +6,29 @@ ls 2:2022/9
 ls 2:2022
 ls 2:2022/09 -r
 c
+ls 1:
+ls 1:/2023
+ls 1:/2023 -r
+ls 1:/2022 -r
+ls 1:
+ls 1:/0000 -r
+ls 0:
+ls 2:
+ls 2:/2022/09
+ls 2:/2022/09 -r
+cat 2:/2022/09/29/P_PN15000-001_SN00006_L202209293.ap2
+ls 0:
+ls 0:/archive/2022/09/29/
+cat 0:/archive/2022/09/29/P_PN15000-001_SN00006_L202209293.ap2
+ls 0:/archive/2022/09/29
+cat 0:/archive/2022/09/29/P_PN15000-001_SN00006_L202209296.ap2
+dxs clear
+dxs http_connection_type disable_ssl
+dxs template_file_path 2:/dxs.json
+dxs host 172.17.16.1:1500
+dxs client_type xseries
+dxs auth_user test
+dxs auth_pwd test
+dxs md5_checksum
+dxs md5_checksum W13os0B2FEJeqEk0xJAh1w==
+dxs save_config_file 2:/dxs_config.bin
