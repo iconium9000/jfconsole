@@ -1,0 +1,10 @@
+{
+  "project_name": "f4lab",
+  "processors": [
+    {
+      "processor_name": "f4",
+      "baudrate": 3000000,
+      "port_name": "COM31"
+    }
+  ]
+}

@@ -5,3 +5,4 @@ ui action start
 ui action pause
 ui action start
 s
+reset

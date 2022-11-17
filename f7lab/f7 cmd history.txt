@@ -1,0 +1,101 @@
+#V2
+ls 0: -r
+reset both
+ls 0: -r
+reset both
+ls 0: -r
+reset both
+ls 0: -r
+reset both
+ls 0: -r
+reset both
+ls 0: -r
+reset both
+ls 0: -r
+reset both
+ls 0: -r
+reset both
+ls 0: -r
+reset both
+ls 0: -r
+reset both
+ls 0: -r
+reset both
+ls 0: -r
+cat 0:/0000/0/0/P_PN15236-001_SN00002_L0000002.ap2
+ls 0: -r
+reset both
+ls 0: -r
+reset both
+ls 0: -r
+reset both
+ls 0: -r
+reset both
+ls 0: -r
+format -f 0:
+reset both
+format -f 0:
+reset both
+ls 0: -r
+reset both
+ls 0: -r
+reset both
+ls 0: -r
+reset both
+ls 0: -r
+format -f 0:
+ls 0: -r
+format 0:
+reset both
+ls -r 0:
+format 0:
+cat 0:/0000/0/0/P_PN15236-001_SN00002_L0000000.ap2
+ls ls 0:
+cat 0:/0000/0/0/P_PN15236-001_SN00002_L0000001.ap2
+format 0:
+reset both
+format 0:
+ls 0:
+format 0:
+reset both
+ls 0:
+reset both
+format 0:
+reset both
+cat 0:/0000/0/0/P_PN15236-001_SN00002_L0000000.ap2
+format 0:
+reset both
+ls 0: -r
+format 0:
+reset both
+ls 0:
+reset both
+format 0:
+ls 0:
+ls 0: -r
+format 0:
+reset both
+format 0:
+reset both
+format 0:
+reset both
+format 0:
+ls 0: -r
+reset both
+ls 0: -r
+reset both
+ls 0: -r
+format 0:
+reset both
+format 0:
+reset both
+format 0:
+reset both
+ls 0: -r
+reset both
+ls 0: -r
+reset both
+format 0:
+ls 0: -r
+format 0:
+reset both

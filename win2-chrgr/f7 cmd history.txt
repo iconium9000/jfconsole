@@ -1,5 +1,4 @@
 #V2
-log_egress disable
 log_egress enable
 ls 2:/2022 -r
 watchdogtest
@@ -99,3 +98,4 @@ ls 2:/2022 -r
 hexify 2:/2022/07/14/battery/B20220714180430_00067.json
 cat 2:/2022/07/14/battery/B20220714180430_00067.json
 hexify 2:/2022/07/14/battery/B20220714180430_00067.json
+reset

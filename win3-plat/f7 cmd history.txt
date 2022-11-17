@@ -1,65 +1,4 @@
 #V2
-ls 0:
-ls 1:
-dbg
-ls 1:
-cat 1:/LogTest.log
-hexify 1:/LogTest.log
-dbg
-dbg 3
-hexify 1:/LogTest.log
-cat 1:/LogTest.log
-ls 1:/2022 -r
-ls 0:
-ls 0: -r
-ls 1: -r
-ls 1:
-ls 0:
-cat 0:/reportdata.txt
-hexify 0:/reportdata.txt
-inc 1:
-inc 2:
-inc 1:/100123/0123/12/aa234.ap2
-inc 1:/1023/3/2/4.ap2
-inc 1:/0012/120_B3/7/P_SN08_PN01_L0012374.ap2
-mkdir
-inc 1:/0012/120_B3/7/P_SN08_PN01_L0012374.ap2
-mkdir 1:/0012/120_B3/7/P_PN20220101_SN00_L12120375.ap2
-c
-mkdir 1:/0012/120_B3/7/P_PN20220101_SN00_L12120375.ap2
-ls 1:/0012 -r
-ls 1:
-mkdir 1:/0012/120_B3/7/P_PN20220101_SN00_L12120375.ap2
-ls -r 1:/0012/120_B3
-ls -r 1:/0012
-ls -rd 1:/0012
-ls -r 1:/0012
-ls 1:/0012
-ls 1:/0012/120_B3
-ls 1:/0012/120_B3/7
-te
-ls 0:
-ls 1:
-te
-hexify 0:/0000/0/0/P_PN20220101_SN00_L0000000.ap2
-te
-hexify 0:/active.ap2
-cat 0:/active.ap2
-s
-reset both
-cat 0:/active
-cat 0:/active.ap2
-reset both
-cat 0:/active.ap2
-ls 1:/
-ls 0:/
-reset both
-ls 0:
-ls 1:
-cat 0:/active.ap2
-ls 0:
-ls 1:
-cat 1:/active
 ls 1:
 cat 1:/active.ap2
 ls 0:
@@ -99,3 +38,64 @@ ls 0:
 cat 1:/active.ap2
 \\
 cat 1:/active.ap2
+ls 1:
+ls 1:/2023 -r
+ls 1:/2022 -r
+ll 1:/0000 -r
+ls 1:/0000 -r
+q
+reset both
+cat 2:/active.ap2
+.
+cat 2:/active.ap2
+cat 1:/0000/0/2/P_PN15000-001_SN00006_L25719778.ap2
+cat 1:/0000/0/2/P_PN15000-001_SN00006_L0000029.ap2
+cat 2:/active.ap2
+cat 1:/active.ap2
+J
+reset both
+cat 1:/active.ap2
+reset both
+cat 1:/active.ap2
+ls 0:
+ls 1:
+ls 0:
+ls 1:
+ls 0:
+cat 0:/active.ap2
+cat 1:/active.ap2
+ls 1:
+ls 0:
+ls 1:
+cat 1:/B20220714162420_00067.json
+ls 0:
+cat 0:/active.ap2
+reset both
+cat 0:/active.ap2
+reset both
+cat 0:/active.ap2
+cat 1:/B20220714162420_00067.json
+ls 0:
+ls 0: -r
+cat 0:/active.ap2
+cat 1:/active.ap2
+ls 0: -r
+ls 0:/2021
+?
+ls 0:/2021
+ls 0:/2020
+ls 0:/2022
+ls 0:/2000
+ls 0:/2000 -r
+ls 1:
+cat 1:/latest_log_file.txt
+hexify 1:/latest_log_file.txt
+ls 1:/2023
+ls 1: -r
+1:/latest_log_file.txt
+batt
+help
+UI
+batt
+disk_read
+ls 0:
