@@ -26,7 +26,7 @@ impl<const SIZE: usize> SerialConsoleThread<SIZE> {
     ) -> BoxResult<Self> {
         let duration = std::time::Duration::from_millis(10);
         let path = processor_info.port_name.clone();
-        let baud_rate = processor_info.baudrate;
+        let baud_rate = processor_info.baud_rate;
         let builder = serialport::new(path, baud_rate).timeout(duration);
         let serial_port = builder.open().box_err()?;
         let (victim, assassin) = new_sync_flag();

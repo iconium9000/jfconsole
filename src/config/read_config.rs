@@ -21,7 +21,7 @@ pub struct ConfigDto {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ProcessorInfoDto {
     processor_name: String,
-    baudrate: BuadRate,
+    baud_rate: BuadRate,
     port_name: String,
 }
 
@@ -29,7 +29,7 @@ impl ProcessorInfo {
     fn to_dto(&self) -> ProcessorInfoDto {
         ProcessorInfoDto {
             processor_name: self.processor_name.clone(),
-            baudrate: self.baudrate,
+            baud_rate: self.baud_rate,
             port_name: self.port_name.clone(),
         }
     }
@@ -40,7 +40,7 @@ impl ProcessorInfo {
         Self {
             port_name: self.port_name.clone(),
             usb_port_info: self.usb_port_info.clone(),
-            baudrate: dto.baudrate,
+            baud_rate: dto.baud_rate,
             processor_name: dto.processor_name,
         }
     }
@@ -50,12 +50,12 @@ impl Config {
     pub fn from_dto(
         project_path: PathBuf,
         cfg: ConfigDto,
-        procs: &[ProcessorInfo],
+        proc_info: &[ProcessorInfo],
     ) -> BoxResult<Self> {
         let mut processors = vec![];
         let cfg_processors_len = cfg.processors.len();
         for p_dto in cfg.processors.into_vec() {
-            for p_rc in procs {
+            for p_rc in proc_info {
                 if p_rc.port_name.eq(&p_dto.port_name) {
                     processors.push(p_rc.duplicate_from_dto(p_dto));
                     break;
@@ -123,24 +123,24 @@ pub enum UserSelectFileRes {
 
 impl Config {
     pub fn user_select_file(procs: &[ProcessorInfo]) -> UserSelectFileRes {
-        let mut cfgs = vec![];
+        let mut config_vec = vec![];
         match fs::read_dir("./") {
             Ok(paths) => {
                 for path_res in paths {
                     match Self::read_config_file(path_res.box_err(), &procs) {
-                        Ok(cfg) => cfgs.push(cfg),
+                        Ok(cfg) => config_vec.push(cfg),
                         _ => {}
                     }
                 }
             }
             Err(e) => return UserSelectFileRes::Err(Box::new(e)),
         }
-        if cfgs.is_empty() {
+        if config_vec.is_empty() {
             println!("> No config files found");
             return UserSelectFileRes::NoConfigs;
         }
         println!("Config Options:");
-        for (idx, cfg) in cfgs.iter().enumerate() {
+        for (idx, cfg) in config_vec.iter().enumerate() {
             println!("{}) {} ({:?})", idx + 1, cfg.project_name, cfg.project_path);
         }
         let msg = "Enter index of config to use (or enter to create new config)";
@@ -151,7 +151,7 @@ impl Config {
             }
             ReadAndParseUserEntryRes::Ok(e) => {
                 let mut i = 0;
-                for cfg in cfgs {
+                for cfg in config_vec {
                     i += 1;
                     if i == e {
                         println!(

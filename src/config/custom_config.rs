@@ -30,7 +30,7 @@ impl ProcessorInfo {
             self.port_name, self.processor_name
         );
 
-        self.baudrate = loop {
+        self.baud_rate = loop {
             println!(
                 "Baud rates options for {:?} port {:?}:",
                 self.processor_name, self.port_name,
@@ -54,7 +54,7 @@ impl ProcessorInfo {
         };
         Ok(println!(
             "> Set baudrate of {:?} as {}\n",
-            self.processor_name, self.baudrate
+            self.processor_name, self.baud_rate
         ))
     }
 }

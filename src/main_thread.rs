@@ -38,7 +38,7 @@ pub fn set_thread_priority<const PRIORITY: u8>() {
 pub struct ProcessorInfo {
     pub port_name: String,
     pub usb_port_info: UsbPortInfo,
-    pub baudrate: BuadRate,
+    pub baud_rate: BuadRate,
     pub processor_name: String,
 }
 
@@ -47,7 +47,7 @@ impl ProcessorInfo {
         Self {
             port_name,
             usb_port_info,
-            baudrate: DEFAULT_BAUDRATE,
+            baud_rate: DEFAULT_BAUDRATE,
             processor_name: String::new(),
         }
     }
@@ -58,7 +58,7 @@ impl ProcessorInfo {
         Self {
             port_name: self.port_name.clone(),
             usb_port_info: self.usb_port_info.clone(),
-            baudrate: self.baudrate,
+            baud_rate: self.baud_rate,
             processor_name: self.processor_name.clone(),
         }
     }
