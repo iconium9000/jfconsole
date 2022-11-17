@@ -1,3 +1,8 @@
+use crate::utils::{
+    sync_flag::{new_sync_flag, SyncFlagAssassin, SyncFlagVictim},
+    user_io::BoxResult,
+};
+use chrono::Utc;
 use std::{
     fs::{create_dir, File, OpenOptions},
     io::Write,
@@ -7,15 +12,8 @@ use std::{
     time::Duration,
 };
 
-use chrono::Utc;
-
-use crate::{
-    sync_flag::{new_sync_flag, SyncFlagAssassin, SyncFlagVictim},
-    utils::user_io::BoxResult,
-};
-
 pub struct FileLoggerThread {
-    assasin: SyncFlagAssassin,
+    assassin: SyncFlagAssassin,
     join_handle: JoinHandle<BoxResult<()>>,
 }
 
@@ -49,7 +47,7 @@ impl FileLoggerThread {
 
         let (victim, assassin) = new_sync_flag();
         Ok(Self {
-            assasin: assassin,
+            assassin,
             join_handle: thread::spawn(move || {
                 file_logger_task(victim, file, line_receiver, main_thread_assassin)
             }),
@@ -57,7 +55,7 @@ impl FileLoggerThread {
     }
 
     pub fn join(self) -> BoxResult<()> {
-        self.assasin.kill_victim();
+        self.assassin.kill_victim();
         self.join_handle.join()?
     }
 }

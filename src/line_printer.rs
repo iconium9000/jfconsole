@@ -1,7 +1,6 @@
-use std::sync::mpsc::Sender;
-
 use crate::{main_thread::DATE_TIME_FMT, utils::ring_buf_queue::RingBufQProducer};
 use chrono::Utc;
+use std::sync::mpsc::Sender;
 
 pub struct LinePrinter {
     console_timestamp: String,

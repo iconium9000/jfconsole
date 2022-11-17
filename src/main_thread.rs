@@ -2,11 +2,13 @@ use crate::{
     file_logger_thread::FileLoggerThread,
     line_printer::LinePrinter,
     read_config::UserSelectFileRes,
-    utils::ring_buf_queue::new_ring_buf_q,
     serial_console_thread::SerialConsoleThread,
-    sync_flag::new_sync_flag,
     user_console_thread::{user_console_task, ProcessorUserConsoleWriter},
-    utils::user_io::{BoxErr, BoxResult},
+    utils::{
+        ring_buf_queue::new_ring_buf_q,
+        sync_flag::new_sync_flag,
+        user_io::{BoxErr, BoxResult},
+    },
 };
 use serialport::{available_ports, SerialPortType, UsbPortInfo};
 use std::{
@@ -119,7 +121,7 @@ pub fn main_task() -> BoxResult<()> {
     for processor_info in cfg.processors.into_vec() {
         let (write_producer, write_consumer) = new_ring_buf_q();
         let mut write_consumers = vec![write_consumer];
-        
+
         let mut line_write_producer = None;
         if processor_info.processor_name == "f4" {
             let (write_producer, write_consumer) = new_ring_buf_q();

@@ -1,16 +1,15 @@
-use serde::{Deserialize, Serialize};
-use std::{
-    fs::{self, DirEntry, File},
-    io::BufReader,
-    path::PathBuf,
-};
-
 use crate::{
     main_thread::{BuadRate, Config, ProcessorInfo},
     utils::user_io::{
         read_and_parse_user_entry, BoxErr, BoxError, BoxResult, RaisedError,
         ReadAndParseUserEntryRes,
     },
+};
+use serde::{Deserialize, Serialize};
+use std::{
+    fs::{self, DirEntry, File},
+    io::BufReader,
+    path::PathBuf,
 };
 
 #[derive(Serialize, Deserialize, Debug)]

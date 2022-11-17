@@ -2,8 +2,10 @@ use crate::{
     line_printer::LinePrinter,
     main_thread::ProcessorInfo,
     utils::ring_buf_queue::RingBufQConsumer,
-    sync_flag::{new_sync_flag, SyncFlagAssassin, SyncFlagVictim},
-    utils::user_io::{BoxErr, BoxResult},
+    utils::{
+        sync_flag::{new_sync_flag, SyncFlagAssassin, SyncFlagVictim},
+        user_io::{BoxErr, BoxResult},
+    },
 };
 use serialport::SerialPort;
 use std::{
@@ -48,7 +50,7 @@ fn serial_console_task<const SIZE: usize>(
     mut write_consumers: Vec<RingBufQConsumer<SIZE, u8>>,
     mut line_printer: LinePrinter,
 ) -> BoxResult<()> {
-    let mut read_buf =  [0u8; SIZE];
+    let mut read_buf = [0u8; SIZE];
 
     while victim.is_alive() {
         for write_consumer in write_consumers.iter_mut() {

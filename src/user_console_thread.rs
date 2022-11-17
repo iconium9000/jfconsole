@@ -1,13 +1,10 @@
-use std::path::{Path, PathBuf};
-
-use rustyline::{error::ReadlineError, Editor};
-
 use crate::{
-    utils::ring_buf_queue::RingBufQProducer,
     line_printer::LinePrinter,
     main_thread::{set_thread_priority, ProcessorInfo, USER_CONSOLE_THREAD_PRIORITY},
-    sync_flag::SyncFlagVictim,
+    utils::{ring_buf_queue::RingBufQProducer, sync_flag::SyncFlagVictim},
 };
+use rustyline::{error::ReadlineError, Editor};
+use std::path::{Path, PathBuf};
 
 pub struct ProcessorUserConsoleWriter {
     processor_name: String,
