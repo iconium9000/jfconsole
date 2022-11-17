@@ -1,6 +1,6 @@
 use crate::{
     main_thread::{Config, ProcessorInfo},
-    user_io::{read_and_parse_user_entry, BoxErr, ReadAndParseUserEntryRes, BoxResult},
+    utils::user_io::{read_and_parse_user_entry, BoxErr, BoxResult, ReadAndParseUserEntryRes},
 };
 use rustyline::{error::ReadlineError, Editor};
 use std::{num::ParseIntError, path::PathBuf};

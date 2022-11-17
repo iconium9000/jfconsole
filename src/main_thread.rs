@@ -6,7 +6,7 @@ use crate::{
     serial_console_thread::SerialConsoleThread,
     sync_flag::new_sync_flag,
     user_console_thread::{user_console_task, ProcessorUserConsoleWriter},
-    user_io::{BoxErr, BoxResult},
+    utils::user_io::{BoxErr, BoxResult},
 };
 use serialport::{available_ports, SerialPortType, UsbPortInfo};
 use std::{

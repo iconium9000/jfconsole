@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     main_thread::{BuadRate, Config, ProcessorInfo},
-    user_io::{
+    utils::user_io::{
         read_and_parse_user_entry, BoxErr, BoxError, BoxResult, RaisedError,
         ReadAndParseUserEntryRes,
     },

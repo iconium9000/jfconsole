@@ -3,7 +3,7 @@ use crate::{
     main_thread::ProcessorInfo,
     utils::ring_buf_queue::RingBufQConsumer,
     sync_flag::{new_sync_flag, SyncFlagAssassin, SyncFlagVictim},
-    user_io::{BoxErr, BoxResult},
+    utils::user_io::{BoxErr, BoxResult},
 };
 use serialport::SerialPort;
 use std::{

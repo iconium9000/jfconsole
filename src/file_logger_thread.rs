@@ -11,7 +11,7 @@ use chrono::Utc;
 
 use crate::{
     sync_flag::{new_sync_flag, SyncFlagAssassin, SyncFlagVictim},
-    user_io::BoxResult,
+    utils::user_io::BoxResult,
 };
 
 pub struct FileLoggerThread {
