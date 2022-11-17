@@ -1,7 +1,7 @@
 use crate::{
+    config::read_config::UserSelectFileRes,
     file_logger_thread::FileLoggerThread,
     line_printer::LinePrinter,
-    read_config::UserSelectFileRes,
     serial_console_thread::SerialConsoleThread,
     user_console_thread::{user_console_task, ProcessorUserConsoleWriter},
     utils::{
