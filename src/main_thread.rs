@@ -2,7 +2,7 @@ use crate::{
     file_logger_thread::FileLoggerThread,
     line_printer::LinePrinter,
     read_config::UserSelectFileRes,
-    ring_buf_queue::new_ring_buf_q,
+    utils::ring_buf_queue::new_ring_buf_q,
     serial_console_thread::SerialConsoleThread,
     sync_flag::new_sync_flag,
     user_console_thread::{user_console_task, ProcessorUserConsoleWriter},

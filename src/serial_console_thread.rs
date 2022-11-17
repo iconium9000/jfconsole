@@ -1,7 +1,7 @@
 use crate::{
     line_printer::LinePrinter,
     main_thread::ProcessorInfo,
-    ring_buf_queue::RingBufQConsumer,
+    utils::ring_buf_queue::RingBufQConsumer,
     sync_flag::{new_sync_flag, SyncFlagAssassin, SyncFlagVictim},
     user_io::{BoxErr, BoxResult},
 };
