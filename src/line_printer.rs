@@ -98,7 +98,8 @@ impl LinePrinter {
 
         let wp: &mut Option<_> = &mut self.write_producer;
         if let Some(wp) = wp {
-            if lines.contains("IPC Comm Failure!") {
+            if lines.contains("IPC Comm Failure") {
+                println!("> [line_printer] ipc comm failure");
                 wp.push("t ipcwdg\r".as_bytes())
             }
         }
