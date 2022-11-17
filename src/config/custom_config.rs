@@ -1,5 +1,5 @@
 use crate::{
-    main_thread::{Config, ProcessorInfo},
+    threads::{Config, ProcessorInfo},
     utils::user_io::{read_and_parse_user_entry, BoxErr, BoxResult, ReadAndParseUserEntryRes},
 };
 use rustyline::{error::ReadlineError, Editor};

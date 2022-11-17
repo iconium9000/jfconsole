@@ -1,6 +1,6 @@
 use crate::{
     line_printer::LinePrinter,
-    main_thread::ProcessorInfo,
+    threads::ProcessorInfo,
     utils::ring_buf_queue::RingBufQConsumer,
     utils::{
         sync_flag::{new_sync_flag, SyncFlagAssassin, SyncFlagVictim},

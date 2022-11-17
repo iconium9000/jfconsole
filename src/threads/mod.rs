@@ -18,7 +18,7 @@ use std::{
 use thread_priority::{set_current_thread_priority, ThreadPriority};
 
 pub type BuadRate = u32;
-pub const DEFAULT_BAUDRATE: BuadRate = 115_200;
+pub const DEFAULT_BAUD_RATE: BuadRate = 115_200;
 pub const DATE_TIME_FMT: &'static str = "%y-%m-%d %H:%M:%S%.3f";
 
 pub const BUFFER_SIZE: usize = 0x1000;
@@ -47,7 +47,7 @@ impl ProcessorInfo {
         Self {
             port_name,
             usb_port_info,
-            baud_rate: DEFAULT_BAUDRATE,
+            baud_rate: DEFAULT_BAUD_RATE,
             processor_name: String::new(),
         }
     }
