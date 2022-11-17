@@ -1,5 +1,5 @@
 pub mod utils;
-pub mod custom_config;
+pub mod config;
 pub mod main_thread;
 pub mod read_config;
 pub mod serial_console_thread;
