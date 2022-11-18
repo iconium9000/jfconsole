@@ -1,7 +1,8 @@
 use crate::{
-    line_printer::LinePrinter,
     threads::{set_thread_priority, ProcessorInfo, USER_CONSOLE_THREAD_PRIORITY},
-    utils::{ring_buf_queue::RingBufQProducer, sync_flag::SyncFlagVictim},
+    utils::{
+        line_printer::LinePrinter, ring_buf_queue::RingBufQProducer, sync_flag::SyncFlagVictim,
+    },
 };
 use rustyline::{error::ReadlineError, Editor};
 use std::path::{Path, PathBuf};

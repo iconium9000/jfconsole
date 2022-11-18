@@ -1,10 +1,10 @@
 use crate::{
     config::read_config::UserSelectFileRes,
     file_logger_thread::FileLoggerThread,
-    line_printer::LinePrinter,
     serial_console_thread::SerialConsoleThread,
     user_console_thread::{user_console_task, ProcessorUserConsoleWriter},
     utils::{
+        line_printer::LinePrinter,
         ring_buf_queue::new_ring_buf_q,
         sync_flag::new_sync_flag,
         user_io::{BoxErr, BoxResult},
