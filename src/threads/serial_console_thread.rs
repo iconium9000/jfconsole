@@ -1,11 +1,10 @@
 use crate::{
-    threads::ProcessorInfo,
     utils::ring_buf_queue::RingBufQConsumer,
     utils::{
         line_printer::LinePrinter,
         sync_flag::{new_sync_flag, SyncFlagAssassin, SyncFlagVictim},
         user_io::{BoxErr, BoxResult},
-    },
+    }, config::ProcessorInfo,
 };
 use serialport::SerialPort;
 use std::{

@@ -1,5 +1,6 @@
 use crate::{
-    threads::{set_thread_priority, ProcessorInfo, USER_CONSOLE_THREAD_PRIORITY},
+    config::ProcessorInfo,
+    threads::main_thread::{set_thread_priority, USER_CONSOLE_THREAD_PRIORITY},
     utils::{
         line_printer::LinePrinter, ring_buf_queue::RingBufQProducer, sync_flag::SyncFlagVictim,
     },

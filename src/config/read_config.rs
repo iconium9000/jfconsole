@@ -1,5 +1,5 @@
 use crate::{
-    threads::{BuadRate, Config, ProcessorInfo},
+    config::{BuadRate, Config, ProcessorInfo},
     utils::user_io::{
         read_and_parse_user_entry, BoxErr, BoxError, BoxResult, RaisedError,
         ReadAndParseUserEntryRes,

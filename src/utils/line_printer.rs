@@ -1,6 +1,8 @@
-use crate::{threads::DATE_TIME_FMT, utils::ring_buf_queue::RingBufQProducer};
+use crate::utils::ring_buf_queue::RingBufQProducer;
 use chrono::Utc;
 use std::sync::mpsc::Sender;
+
+pub const DATE_TIME_FMT: &'static str = "%y-%m-%d %H:%M:%S%.3f";
 
 pub struct LinePrinter {
     console_timestamp: String,
