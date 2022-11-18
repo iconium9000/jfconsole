@@ -25,17 +25,6 @@ impl ProcessorInfo {
     }
 }
 
-impl ProcessorInfo {
-    pub fn duplicate(&self) -> Self {
-        Self {
-            port_name: self.port_name.clone(),
-            usb_port_info: self.usb_port_info.clone(),
-            baud_rate: self.baud_rate,
-            processor_name: self.processor_name.clone(),
-        }
-    }
-}
-
 pub struct Config {
     pub processors: Box<[ProcessorInfo]>,
     pub project_name: String,
