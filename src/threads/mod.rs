@@ -1,6 +1,6 @@
 use crate::{
     config::read_config::UserSelectFileRes,
-    file_logger_thread::FileLoggerThread,
+    threads::{file_logger_thread::FileLoggerThread},
     serial_console_thread::SerialConsoleThread,
     user_console_thread::{user_console_task, ProcessorUserConsoleWriter},
     utils::{
@@ -16,6 +16,8 @@ use std::{
     sync::mpsc::channel,
 };
 use thread_priority::{set_current_thread_priority, ThreadPriority};
+
+pub mod file_logger_thread;
 
 pub type BuadRate = u32;
 pub const DEFAULT_BAUD_RATE: BuadRate = 115_200;
