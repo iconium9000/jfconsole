@@ -3,8 +3,8 @@ use crate::{
     threads::{
         file_logger_thread::FileLoggerThread,
         serial_console_thread::SerialConsoleThread,
+        user_console_thread::{user_console_task, ProcessorUserConsoleWriter},
     },
-    user_console_thread::{user_console_task, ProcessorUserConsoleWriter},
     utils::{
         line_printer::LinePrinter,
         ring_buf_queue::new_ring_buf_q,
@@ -21,6 +21,7 @@ use thread_priority::{set_current_thread_priority, ThreadPriority};
 
 pub mod file_logger_thread;
 pub mod serial_console_thread;
+pub mod user_console_thread;
 
 pub type BuadRate = u32;
 pub const DEFAULT_BAUD_RATE: BuadRate = 115_200;
