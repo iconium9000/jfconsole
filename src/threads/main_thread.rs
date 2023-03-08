@@ -17,7 +17,7 @@ use std::{path::Path, sync::mpsc::channel};
 use thread_priority::{set_current_thread_priority, ThreadPriority};
 
 pub const BUFFER_SIZE: usize = 0x1000;
-pub const LINE_WIDTH: usize = 80;
+pub const LINE_WIDTH: usize = 800;
 pub const BYTE_PROCESS_THREAD_PRIORITY: u8 = 0;
 pub const SERIAL_PORT_THREAD_PRIORITY: u8 = 1;
 pub const USER_CONSOLE_THREAD_PRIORITY: u8 = 2;

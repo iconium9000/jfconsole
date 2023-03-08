@@ -68,7 +68,7 @@ fn file_logger_task(
 ) -> BoxResult<()> {
     let mut synced = true;
     Ok(while victim.is_alive() {
-        let duration = Duration::from_millis(100);
+        let duration = Duration::from_millis(1000);
         if let Ok(mut line) = line_receiver.recv_timeout(duration) {
             line.push('\n');
             if let Err(e) = file.write_all(line.as_bytes()) {
