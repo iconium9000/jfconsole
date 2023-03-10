@@ -26,7 +26,7 @@ impl ProcessorInfo {
 }
 
 pub struct Config {
-    pub processors: Box<[ProcessorInfo]>,
+    pub processors: Vec<ProcessorInfo>,
     pub project_name: String,
     pub project_path: PathBuf,
 }

@@ -3,6 +3,7 @@ use crate::{
     utils::user_io::{read_and_parse_user_entry, BoxErr, BoxResult, ReadAndParseUserEntryRes},
 };
 use rustyline::{error::ReadlineError, Editor};
+use tokio_serial::{available_ports, SerialPortType};
 use std::{num::ParseIntError, path::PathBuf};
 
 pub enum UserSelectConfigRes {
@@ -16,6 +17,23 @@ pub enum UserSelectConfigRes {
     },
     IOErr(std::io::Error),
     ReadErr(ReadlineError),
+}
+
+impl ProcessorInfo {
+    pub fn available_processors() -> BoxResult<Vec<ProcessorInfo>> {
+        let ports = available_ports().box_err()?;
+
+        let mut procs = vec![];
+        for serial_port_info in ports {
+            if let SerialPortType::UsbPort(usb_port_info) = serial_port_info.port_type {
+                procs.push(ProcessorInfo::new(
+                    serial_port_info.port_name,
+                    usb_port_info,
+                ));
+            }
+        }
+        Ok(procs)
+    }
 }
 
 impl ProcessorInfo {
@@ -117,15 +135,24 @@ impl Config {
             let _ = editor.readline("press enter to continue: ");
         }
 
-        let prompt = "enter project name: ";
-        let project_name = editor.readline(prompt).box_err()?;
+        let project_name = loop {
+            let prompt = "enter project name: ";
+            let project_name = editor.readline(prompt).box_err()?;
+
+            if project_name.is_empty() {
+                println!("> Empty project name. Try again");
+            } else {
+                break project_name
+            }
+        };
+
         println!("> Set project name as {}", project_name);
 
-        let project_path = PathBuf::from(format!("./{}.json", project_name));
+        let project_path = format!("./{}.json", project_name);
         Self {
             processors: selected.into(),
             project_name,
-            project_path,
+            project_path: PathBuf::from(project_path),
         }
         .save_config_file()
     }
