@@ -25,8 +25,9 @@ pub const FILE_LOGGER_THREAD_PRIORITY: u8 = 3;
 
 pub fn set_thread_priority<const PRIORITY: u8>() {
     let priority = ThreadPriority::Crossplatform(PRIORITY.try_into().unwrap());
+    println!("{}:{} {:#?}", file!(), line!(), priority);
     if let Err(e) = set_current_thread_priority(priority) {
-        panic!("set_current_thread_priority => {:#?}", e);
+        println!("set_current_thread_priority({}) => {:#?}", PRIORITY, e);
     }
 }
 
