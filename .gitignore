@@ -1,4 +1,6 @@
 /target
 /Cargo.lock
+/config/**
+/archive/**
 *.log
 *.exe

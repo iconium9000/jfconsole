@@ -121,7 +121,7 @@ impl Config {
         let project_name = editor.readline(prompt).box_err()?;
         println!("> Set project name as {}", project_name);
 
-        let project_path = PathBuf::from(format!("./{}.json", project_name));
+        let project_path = PathBuf::from(format!("./config/{}.json", project_name));
         Self {
             processors: selected.into(),
             project_name,
