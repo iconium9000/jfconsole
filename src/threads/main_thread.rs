@@ -57,8 +57,8 @@ pub fn main_task() -> BoxResult<()> {
     let cfg = loop {
         match Config::user_select_file(&proc_v) {
             UserSelectFileRes::Select(cfg) => break cfg,
-            UserSelectFileRes::NoConfigs => break Config::user_create_custom(proc_v).unwrap(),
-            UserSelectFileRes::SelectCustom => break Config::user_create_custom(proc_v).unwrap(),
+            UserSelectFileRes::NoConfigs => break Config::user_create_custom(proc_v),
+            UserSelectFileRes::SelectCustom => break Config::user_create_custom(proc_v),
             UserSelectFileRes::InvalidEntry => continue,
             UserSelectFileRes::Err(e) => return Err(e),
         }

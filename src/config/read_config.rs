@@ -76,15 +76,15 @@ impl Config {
 }
 
 impl Config {
-    pub fn save_config_file(self) -> BoxResult<Self> {
+    pub fn save_config_file(self) -> Self {
         let ref value = ConfigDto {
             project_name: self.project_name.clone(),
             processors: self.processors.iter().map(|p| p.to_dto()).collect(),
         };
 
-        let contents = serde_json::to_string_pretty(value).box_err()?;
-        fs::write(self.project_path.clone(), contents).box_err()?;
-        Ok(self)
+        let contents = serde_json::to_string_pretty(value).unwrap();
+        fs::write(self.project_path.clone(), contents).unwrap();
+        self
     }
 }
 

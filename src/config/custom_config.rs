@@ -86,7 +86,7 @@ impl ProcessorInfo {
 }
 
 impl Config {
-    pub fn user_create_custom(mut procs: Vec<ProcessorInfo>) -> BoxResult<Self> {
+    pub fn user_create_custom(mut procs: Vec<ProcessorInfo>) -> Self {
         let mut editor = Editor::<()>::new();
         let mut selected = vec![];
         loop {
