@@ -111,14 +111,14 @@ impl Config {
                     println!("> No Ports remaining\n");
                     break;
                 }
-                UserSelectConfigRes::IOErr(e) => return Err(Box::new(e)),
-                UserSelectConfigRes::ReadErr(e) => return Err(Box::new(e)),
+                UserSelectConfigRes::IOErr(e) => panic!("{:#?}", e),
+                UserSelectConfigRes::ReadErr(e) => panic!("{:#?}", e),
             }
             let _ = editor.readline("press enter to continue: ");
         }
 
         let prompt = "enter project name: ";
-        let project_name = editor.readline(prompt).box_err()?;
+        let project_name = editor.readline(prompt).unwrap();
         println!("> Set project name as {}", project_name);
 
         let project_path = PathBuf::from(format!("./config/{}.json", project_name));
