@@ -50,15 +50,15 @@ impl ProcessorInfo {
 pub fn main_task() -> BoxResult<()> {
     println!("Welcome!\n\n");
 
-    let proc_v = ProcessorInfo::available_processors()?;
+    let proc_v = ProcessorInfo::available_processors().unwrap();
     if proc_v.is_empty() {
         return Ok(println!("> [main_task] No com ports found"));
     }
     let cfg = loop {
         match Config::user_select_file(&proc_v) {
             UserSelectFileRes::Select(cfg) => break cfg,
-            UserSelectFileRes::NoConfigs => break Config::user_create_custom(proc_v)?,
-            UserSelectFileRes::SelectCustom => break Config::user_create_custom(proc_v)?,
+            UserSelectFileRes::NoConfigs => break Config::user_create_custom(proc_v).unwrap(),
+            UserSelectFileRes::SelectCustom => break Config::user_create_custom(proc_v).unwrap(),
             UserSelectFileRes::InvalidEntry => continue,
             UserSelectFileRes::Err(e) => return Err(e),
         }
@@ -74,7 +74,7 @@ pub fn main_task() -> BoxResult<()> {
 
     let (line_sender, line_receiver) = channel();
     let file_logger_thread =
-        FileLoggerThread::spawn(&cfg.project_name, line_receiver, main_thread_assassin)?;
+        FileLoggerThread::spawn(&cfg.project_name, line_receiver, main_thread_assassin).unwrap();
 
     let mut writer_v = vec![];
     let mut serial_console_thread_v = vec![];
@@ -97,7 +97,7 @@ pub fn main_task() -> BoxResult<()> {
             ),
             &processor_info,
             write_consumers,
-        )?);
+        ).unwrap());
         writer_v.push(ProcessorUserConsoleWriter::new(
             Path::new(&cfg.project_name),
             &processor_info,
