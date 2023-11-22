@@ -9,7 +9,6 @@ use std::{
     path::Path,
     sync::mpsc::Receiver,
     thread::{self, JoinHandle},
-    time::Duration,
 };
 
 pub struct FileLoggerThread {
@@ -67,9 +66,9 @@ fn file_logger_task(
     main_thread_assassin: SyncFlagAssassin,
 ) -> BoxResult<()> {
     let mut synced = true;
-    Ok(while victim.is_alive() {
-        let duration = Duration::from_millis(1000);
-        if let Ok(mut line) = line_receiver.recv_timeout(duration) {
+    while victim.is_alive() {
+        // let duration = Duration::from_millis(1000);
+        if let Ok(mut line) = line_receiver.recv() {
             line.push('\n');
             if let Err(e) = file.write_all(line.as_bytes()) {
                 println!("> [file_logger_task] write error {:#?}", e);
@@ -86,5 +85,6 @@ fn file_logger_task(
         } else {
             synced = true;
         }
-    })
+    }
+    Ok(())
 }

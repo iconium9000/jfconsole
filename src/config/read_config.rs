@@ -1,7 +1,7 @@
 use crate::{
     config::{BuadRate, Config, ProcessorInfo},
     utils::user_io::{
-        read_and_parse_user_entry, BoxErr, BoxError, BoxResult, RaisedError,
+        read_and_parse_user_entry, BoxErr, BoxResult, RaisedError,
         ReadAndParseUserEntryRes,
     },
 };
@@ -90,10 +90,9 @@ impl Config {
 
 impl Config {
     pub fn read_config_file(
-        dir_entry_res: BoxResult<DirEntry>,
+        dir_entry: DirEntry,
         procs: &[ProcessorInfo],
     ) -> BoxResult<Config> {
-        let dir_entry = dir_entry_res?;
         if dir_entry.file_type().box_err()?.is_dir() {
             return Err(RaisedError::new("path to dir"));
         }
@@ -118,22 +117,19 @@ pub enum UserSelectFileRes {
     NoConfigs,
     SelectCustom,
     InvalidEntry,
-    Err(BoxError),
 }
 
 impl Config {
     pub fn user_select_file(procs: &[ProcessorInfo]) -> UserSelectFileRes {
         let mut config_vec = vec![];
-        match fs::read_dir("./") {
-            Ok(paths) => {
-                for path_res in paths {
-                    match Self::read_config_file(path_res.box_err(), &procs) {
-                        Ok(cfg) => config_vec.push(cfg),
-                        _ => {}
-                    }
+        let paths = fs::read_dir("./config").unwrap();
+        for dir_entry_res in paths {
+            if let Ok(dir_entry) = dir_entry_res {
+                match Self::read_config_file(dir_entry, &procs) {
+                    Ok(cfg) => config_vec.push(cfg),
+                    _ => {}
                 }
             }
-            Err(e) => return UserSelectFileRes::Err(Box::new(e)),
         }
         if config_vec.is_empty() {
             println!("> No config files found");
@@ -172,8 +168,8 @@ impl Config {
                 println!("> New Custom config\n");
                 UserSelectFileRes::SelectCustom
             }
-            ReadAndParseUserEntryRes::IOErr(e) => UserSelectFileRes::Err(Box::new(e)),
-            ReadAndParseUserEntryRes::ReadErr(e) => UserSelectFileRes::Err(Box::new(e)),
+            ReadAndParseUserEntryRes::IOErr(e) => panic!("IOErr({:?}", e),
+            ReadAndParseUserEntryRes::ReadErr(e) => panic!("ReadErr({:?}", e),
         }
     }
 }

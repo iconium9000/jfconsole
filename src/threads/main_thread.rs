@@ -25,9 +25,9 @@ pub const FILE_LOGGER_THREAD_PRIORITY: u8 = 3;
 
 pub fn set_thread_priority<const PRIORITY: u8>() {
     let priority = ThreadPriority::Crossplatform(PRIORITY.try_into().unwrap());
-    println!("{}:{} {:#?}", file!(), line!(), priority);
+    println!("{}:{} {:?}", file!(), line!(), priority);
     if let Err(e) = set_current_thread_priority(priority) {
-        println!("set_current_thread_priority({}) => {:#?}", PRIORITY, e);
+        println!("set_current_thread_priority({}) => {:?}", PRIORITY, e);
     }
 }
 
@@ -48,12 +48,13 @@ impl ProcessorInfo {
     }
 }
 
-pub fn main_task() -> BoxResult<()> {
+pub fn main_task() {
     println!("Welcome!\n\n");
 
     let proc_v = ProcessorInfo::available_processors().unwrap();
     if proc_v.is_empty() {
-        return Ok(println!("> [main_task] No com ports found"));
+        println!("> [main_task] No com ports found");
+        return;
     }
     let cfg = loop {
         match Config::user_select_file(&proc_v) {
@@ -61,14 +62,14 @@ pub fn main_task() -> BoxResult<()> {
             UserSelectFileRes::NoConfigs => break Config::user_create_custom(proc_v),
             UserSelectFileRes::SelectCustom => break Config::user_create_custom(proc_v),
             UserSelectFileRes::InvalidEntry => continue,
-            UserSelectFileRes::Err(e) => return Err(e),
         }
     };
     if cfg.processors.is_empty() {
-        return Ok(println!(
+        println!(
             "> [main_task] no processors in config {:?}",
             cfg.project_path
-        ));
+        );
+        return;
     }
 
     let (main_thread_victim, main_thread_assassin) = new_sync_flag();
@@ -122,5 +123,5 @@ pub fn main_task() -> BoxResult<()> {
         writer.save_history();
     }
 
-    Ok(println!("> [main_task] end"))
+    println!("> [main_task] end")
 }
